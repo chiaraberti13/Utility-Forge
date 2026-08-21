@@ -14,9 +14,15 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/tools-2-blue" alt="Tools">
-  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="License: MIT">
-  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational" alt="Maintainer">
+  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="Tools">
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge" alt="License: MIT">
+  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational?style=for-the-badge" alt="Maintainer">
+</p>
+
+<p align="center">
+  <b>If you find these tools useful, consider supporting the project:</b><br>
+  <b>Se questi tool ti sono utili, considera di supportare il progetto:</b><br><br>
+  <a href="https://www.paypal.me/chiaraberti13"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate"></a>
 </p>
 
 ---
