@@ -29,14 +29,12 @@ registrazione SaaS, senza che i dati escano dal tuo browser o dal tuo server.
 
 ## Indice rapido
 
-### [Tool disponibili](#tool-disponibili)
-Cosa c'è nella raccolta al momento — cosa fa ogni tool, con cosa è costruito e dove funziona.
-
-### [Licenza](#licenza)
-MIT, per l'intero repository e ogni cartella tool al suo interno.
-
-### [Aggiungere un nuovo tool](#aggiungere-un-nuovo-tool)
-Come un nuovo tool entra a far parte di questo monorepo e cosa deve riflettere il README.
+- **[Tool disponibili](#tool-disponibili)** — Cosa c'è nella raccolta al momento: cosa
+  fa ogni tool, con cosa è costruito e dove funziona.
+- **[Licenza](#licenza)** — MIT, per l'intero repository e ogni cartella tool al suo
+  interno.
+- **[Aggiungere un nuovo tool](#aggiungere-un-nuovo-tool)** — Come un nuovo tool entra
+  a far parte di questo monorepo e cosa deve riflettere il README.
 
 > [!TIP]
 > **Hai un'idea per un tool?** Apri una [issue](https://github.com/chiaraberti13/Utility-Forge/issues) — l'unico vero requisito è che sia standalone e privacy-first.

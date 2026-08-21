@@ -29,14 +29,11 @@ leaving your browser or your own server.
 
 ## Quick Navigation
 
-### [Tools](#tools)
-What's in the collection right now — what each tool does, what it's built with, and where it runs.
-
-### [Licence](#licence)
-MIT, for the whole repository and every tool folder in it.
-
-### [Adding a new tool](#adding-a-new-tool)
-How a new tool gets folded into this monorepo, and what the README needs to reflect it.
+- **[Tools](#tools)** — What's in the collection right now: what each tool does, what
+  it's built with, and where it runs.
+- **[Licence](#licence)** — MIT, for the whole repository and every tool folder in it.
+- **[Adding a new tool](#adding-a-new-tool)** — How a new tool gets folded into this
+  monorepo, and what the README needs to reflect it.
 
 > [!TIP]
 > **Have a tool idea?** Open an [issue](https://github.com/chiaraberti13/Utility-Forge/issues) — standalone and privacy-first is the only real requirement.
