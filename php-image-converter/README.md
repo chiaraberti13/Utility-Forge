@@ -12,7 +12,8 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
 
 ### ✨ Key Features
 
-- **🔄 Multiple Format Support**: Convert between JPG, PNG, WEBP, BMP, TIFF, GIF, HEIC/HEIF
+- **🔄 Multiple Format Support**: Convert between JPG, PNG, WEBP, AVIF*, BMP, TIFF, GIF, HEIC/HEIF input
+  (*AVIF output is enabled automatically when the server's GD build supports it, PHP 8.1+)
 - **📦 Batch Processing**: Convert multiple images simultaneously
 - **✂️ Advanced Options**: Resize, crop with aspect ratio presets, quality control
 - **🎯 Smart Cropping**: Pre-defined aspect ratios (1:1, 16:9, 4:3, 21:9, etc.)
@@ -97,9 +98,39 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
 
 - **Backend**: Pure PHP with GD Library
 - **Optional**: ImageMagick for HEIC/HEIF and complex TIFF support
-- **Session Management**: Temporary files stored in system temp directory
-- **Security**: File size limits, extension validation, secure file handling
+- **Session Management**: Temporary files stored in system temp directory, in a folder created with
+  `0700` permissions (readable only by the PHP process)
 - **Performance**: Optimized memory usage, configurable timeouts
+
+### 🔒 Security
+
+This tool accepts file uploads and reflects user input back into HTTP headers, disk paths and a
+ZIP archive — all classic injection surfaces for a PHP upload tool. This version hardens each of
+them:
+
+- **CSRF protection**: every state-changing request (upload, convert, rename, remove, clear) must
+  carry a per-session token; requests without a valid token are rejected with `403`.
+- **Real content validation, not just the extension**: each upload is checked with `finfo` against
+  its real MIME type, so a script renamed to `.jpg` is rejected instead of being processed.
+- **Decompression-bomb protection**: images above a configurable megapixel limit are rejected at
+  upload time, and any resize/crop request that would produce an oversized image is rejected
+  before allocating memory for it.
+- **Safe filenames**: the original filename and the naming prefix/suffix are sanitized before
+  being reused as a download filename, an HTTP header, or a ZIP entry — this closes both HTTP
+  header injection and "zip slip" path traversal.
+- **RFC 6266 download headers**: `Content-Disposition` is built with a safe ASCII fallback plus a
+  UTF-8 encoded name, instead of interpolating the filename directly into the header string.
+- **Hardened session cookie**: `HttpOnly`, `SameSite=Strict`, and `Secure` (when served over
+  HTTPS).
+- **Security headers** on every response: `Content-Security-Policy`, `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- **Per-session upload directory** created with `0700` permissions, plus a cap on the number of
+  files a single session can hold.
+- **XSS-safe file list rendering**: filenames shown in the UI are escaped before being inserted
+  into the page.
+
+None of this replaces running the server itself behind HTTPS, keeping PHP/GD/ImageMagick patched,
+and restricting who can reach this script — see *Requirements* above for the baseline.
 
 ### 🌐 Browser Support
 
@@ -124,7 +155,8 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
 
 ### ✨ Caratteristiche Principali
 
-- **🔄 Supporto Formati Multipli**: Converti tra JPG, PNG, WEBP, BMP, TIFF, GIF, HEIC/HEIF
+- **🔄 Supporto Formati Multipli**: Converti in JPG, PNG, WEBP, AVIF*, BMP, TIFF, GIF, in input anche HEIC/HEIF
+  (*l'output AVIF si attiva automaticamente se la build di GD del server lo supporta, PHP 8.1+)
 - **📦 Elaborazione Batch**: Converti più immagini contemporaneamente
 - **✂️ Opzioni Avanzate**: Ridimensionamento, ritaglio con proporzioni predefinite, controllo qualità
 - **🎯 Ritaglio Intelligente**: Proporzioni predefinite (1:1, 16:9, 4:3, 21:9, ecc.)
@@ -209,9 +241,43 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
 
 - **Backend**: PHP puro con GD Library
 - **Opzionale**: ImageMagick per supporto HEIC/HEIF e TIFF complessi
-- **Gestione Sessioni**: File temporanei memorizzati nella directory temp di sistema
-- **Sicurezza**: Limiti dimensione file, validazione estensioni, gestione sicura dei file
+- **Gestione Sessioni**: File temporanei memorizzati nella directory temp di sistema, in una
+  cartella creata con permessi `0700` (leggibile solo dal processo PHP)
 - **Performance**: Uso ottimizzato della memoria, timeout configurabili
+
+### 🔒 Sicurezza
+
+Questo strumento accetta upload di file e riutilizza input dell'utente in header HTTP, percorsi su
+disco e un archivio ZIP — le classiche superfici di injection per un tool PHP di upload. Questa
+versione le rinforza tutte:
+
+- **Protezione CSRF**: ogni richiesta che modifica lo stato (upload, conversione, rinomina,
+  rimozione, cancellazione) deve portare un token per-sessione; le richieste senza token valido
+  vengono rifiutate con `403`.
+- **Validazione sul contenuto reale, non solo sull'estensione**: ogni upload viene verificato con
+  `finfo` confrontando il MIME type reale, così uno script rinominato in `.jpg` viene rifiutato
+  invece di essere elaborato.
+- **Protezione da "decompression bomb"**: le immagini oltre un limite di megapixel configurabile
+  vengono rifiutate al momento dell'upload, e qualsiasi richiesta di ridimensionamento/ritaglio
+  che produrrebbe un'immagine troppo grande viene rifiutata prima di allocare memoria per essa.
+- **Nomi file sicuri**: il nome file originale e il prefisso/suffisso di nomenclatura vengono
+  sanificati prima di essere riusati come nome di download, header HTTP o voce dello ZIP — questo
+  chiude sia l'header injection HTTP sia il path traversal di tipo "zip slip".
+- **Header di download conformi a RFC 6266**: `Content-Disposition` viene costruito con un
+  fallback ASCII sicuro più un nome codificato UTF-8, invece di interpolare direttamente il nome
+  file nella stringa dell'header.
+- **Cookie di sessione rinforzato**: `HttpOnly`, `SameSite=Strict` e `Secure` (quando servito via
+  HTTPS).
+- **Header di sicurezza** su ogni risposta: `Content-Security-Policy`, `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- **Directory di upload per-sessione** creata con permessi `0700`, più un limite al numero di file
+  che una singola sessione può contenere.
+- **Rendering della lista file sicuro contro XSS**: i nomi dei file mostrati nell'interfaccia
+  vengono sanificati prima di essere inseriti nella pagina.
+
+Nulla di questo sostituisce l'eseguire il server dietro HTTPS, mantenere PHP/GD/ImageMagick
+aggiornati e limitare chi può raggiungere questo script — vedi *Requisiti* qui sopra per la base
+di partenza.
 
 ### 🌐 Compatibilità Browser
 

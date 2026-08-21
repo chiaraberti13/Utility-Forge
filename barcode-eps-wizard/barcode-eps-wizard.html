@@ -4,16 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generatore Barcode EPS</title>
-    
+
+    <!--
+        Nota di sicurezza: questo file è a scopo singolo (nessun server, nessun cookie/sessione),
+        quindi la superficie di attacco principale è la lettura di file Excel/CSV non fidati e le
+        tre librerie caricate da CDN qui sotto. Tutti i dati letti dal foglio vengono validati e
+        inseriti nel DOM solo tramite textContent (mai innerHTML/onclick con dati utente) e il
+        barcode viene accettato solo se composto esclusivamente da cifre, per evitare che un file
+        malevolo possa iniettare codice PostScript nell'EPS generato. La Content-Security-Policy
+        qui sotto limita gli script eseguibili alle tre origini CDN indicate più lo script inline
+        di questa pagina (identificato tramite hash SHA-256).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-hOikFKcI4EJwTiwUUM+61tnJYlSBwKaLKXQ1QcH5dFw=' https://cdn.sheetjs.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+
     <!-- SheetJS per leggere Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    
+
     <!-- JSZip per creare file ZIP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
+
+    <!-- Lucide Icons (versione fissata invece di @latest, per evitare che il contenuto cambi a tua insaputa) -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+
     <style>
         * {
             margin: 0;
@@ -459,7 +471,27 @@
         
         let currentData = [];
         let generatedBarcodes = [];
-        
+
+        // Limiti di sicurezza/robustezza: evitano che un file enorme o malformato blocchi il browser
+        const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+        const MAX_ROWS = 5000;
+        const usedFilenames = new Map();
+
+        // Rimuove separatori di percorso e caratteri di controllo dal codice articolo, così che
+        // possa essere usato in sicurezza come nome file e come voce dentro lo ZIP.
+        function sanitizeArticleCode(code) {
+            let safe = String(code).replace(/[\/\\?%*:|"<>\x00-\x1F]/g, '_').trim();
+            if (safe === '') safe = 'articolo';
+            return safe.slice(0, 100);
+        }
+
+        // Evita che due righe con lo stesso codice articolo si sovrascrivano a vicenda nello ZIP
+        function uniqueFilename(base) {
+            const count = usedFilenames.get(base) || 0;
+            usedFilenames.set(base, count + 1);
+            return count === 0 ? base : base.replace(/(\.[^.]+)?$/, `_${count + 1}$1`);
+        }
+
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const generateBtn = document.getElementById('generateBtn');
@@ -497,26 +529,38 @@
         });
         
         function handleFile(file) {
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                showAlert('error', `File troppo grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Il limite è ${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB.`);
+                return;
+            }
+
             const reader = new FileReader();
-            
+
             reader.onload = (e) => {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                    
+
+                    if (jsonData.length > MAX_ROWS) {
+                        showAlert('error', `Il file contiene troppe righe (${jsonData.length}). Il limite è ${MAX_ROWS}: dividi il file in più parti.`);
+                        generateBtn.disabled = true;
+                        stats.style.display = 'none';
+                        return;
+                    }
+
                     currentData = jsonData;
                     document.getElementById('totalCount').textContent = jsonData.length;
                     generateBtn.disabled = false;
                     stats.style.display = 'block';
-                    
+
                     showAlert('success', `File caricato con successo! ${jsonData.length} righe trovate.`);
                 } catch (error) {
                     showAlert('error', `Errore nella lettura del file: ${error.message}`);
                 }
             };
-            
+
             reader.readAsArrayBuffer(file);
         }
         
@@ -526,36 +570,42 @@
             if (currentData.length === 0) return;
             
             generatedBarcodes = [];
+            usedFilenames.clear();
             progressContainer.style.display = 'block';
             preview.style.display = 'block';
             preview.innerHTML = '';
             generateBtn.disabled = true;
             downloadAllBtn.style.display = 'none';
-            
+
             let successCount = 0;
             let errorCount = 0;
-            
+
             for (let i = 0; i < currentData.length; i++) {
                 const item = currentData[i];
-                const codiceArticolo = String(item['Codice articolo'] || '').trim();
+                const rawArticolo = String(item['Codice articolo'] || '').trim();
                 const codiceBarcode = String(item['Barcode'] || '').trim().replace('.0', '');
-                
+                const codiceArticolo = sanitizeArticleCode(rawArticolo || `riga_${i + 1}`);
+
                 try {
-                    const epsContent = generateEPS(codiceBarcode, codiceArticolo);
-                    generatedBarcodes.push({
-                        filename: `${codiceArticolo}.eps`,
-                        content: epsContent,
-                        codiceArticolo,
-                        codiceBarcode
-                    });
-                    
-                    addPreviewItem(codiceArticolo, codiceBarcode, true);
+                    // Il barcode deve essere composto solo da cifre: oltre a essere l'unico input
+                    // valido per un EAN-13, questo impedisce che caratteri come parentesi o
+                    // backslash vengano iniettati nel codice PostScript del file EPS generato.
+                    if (!/^\d{12,13}$/.test(codiceBarcode)) {
+                        throw new Error('Il barcode deve contenere solo 12 o 13 cifre numeriche');
+                    }
+
+                    const epsContent = generateEPS(codiceBarcode);
+                    const filename = uniqueFilename(`${codiceArticolo}.eps`);
+                    const entry = { filename, content: epsContent, codiceArticolo, codiceBarcode };
+                    generatedBarcodes.push(entry);
+
+                    addPreviewItem(codiceArticolo, codiceBarcode, true, '', entry);
                     successCount++;
                 } catch (error) {
                     addPreviewItem(codiceArticolo, codiceBarcode, false, error.message);
                     errorCount++;
                 }
-                
+
                 const progress = ((i + 1) / currentData.length) * 100;
                 progressFill.style.width = progress + '%';
                 progressText.textContent = `${i + 1} / ${currentData.length}`;
@@ -643,7 +693,7 @@
             return bars;
         }
         
-        function generateEPS(codiceBarcode, codiceArticolo) {
+        function generateEPS(codiceBarcode) {
             const bars = encodeEAN13(codiceBarcode);
             const barWidth = 1.0;
             const barHeight = 50.0;
@@ -755,43 +805,56 @@ showpage
             return eps;
         }
         
-        function addPreviewItem(codiceArticolo, codiceBarcode, success, errorMsg = '') {
+        // Costruisce la riga di anteprima usando solo API DOM sicure: ogni valore che proviene
+        // dal file caricato (codice articolo, barcode, messaggio d'errore) viene assegnato con
+        // textContent, mai con innerHTML/onclick, così un file Excel malevolo non può eseguire
+        // script nella pagina.
+        function addPreviewItem(codiceArticolo, codiceBarcode, success, errorMsg = '', entry = null) {
             const item = document.createElement('div');
             item.className = 'preview-item';
-            
-            const statusIcon = success ? 
-                '<i data-lucide="check-circle-2" size="20" style="color: #22c55e;"></i>' :
-                '<i data-lucide="x-circle" size="20" style="color: #dc2626;"></i>';
-            
-            const downloadBtn = success ? 
-                `<button class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px;" onclick="downloadSingle('${codiceArticolo}')">
-                    <i data-lucide="download" size="16"></i>
-                    Scarica
-                </button>` : '';
-            
-            item.innerHTML = `
-                <div class="preview-status">
-                    ${statusIcon}
-                </div>
-                <div class="preview-info">
-                    <div class="preview-code">${codiceArticolo}</div>
-                    <div class="preview-number">${codiceBarcode}</div>
-                    ${!success ? `<div class="preview-error">${errorMsg}</div>` : ''}
-                </div>
-                ${downloadBtn}
-            `;
-            
+
+            const statusWrap = document.createElement('div');
+            statusWrap.className = 'preview-status';
+            statusWrap.innerHTML = success
+                ? '<i data-lucide="check-circle-2" size="20" style="color: #22c55e;"></i>'
+                : '<i data-lucide="x-circle" size="20" style="color: #dc2626;"></i>';
+            item.appendChild(statusWrap);
+
+            const info = document.createElement('div');
+            info.className = 'preview-info';
+
+            const codeEl = document.createElement('div');
+            codeEl.className = 'preview-code';
+            codeEl.textContent = codiceArticolo;
+            info.appendChild(codeEl);
+
+            const numberEl = document.createElement('div');
+            numberEl.className = 'preview-number';
+            numberEl.textContent = codiceBarcode;
+            info.appendChild(numberEl);
+
+            if (!success) {
+                const errEl = document.createElement('div');
+                errEl.className = 'preview-error';
+                errEl.textContent = errorMsg;
+                info.appendChild(errEl);
+            }
+            item.appendChild(info);
+
+            if (success && entry) {
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn btn-secondary';
+                downloadBtn.style.padding = '8px 16px';
+                downloadBtn.style.fontSize = '14px';
+                downloadBtn.innerHTML = '<i data-lucide="download" size="16"></i> Scarica';
+                downloadBtn.addEventListener('click', () => downloadFile(entry.filename, entry.content));
+                item.appendChild(downloadBtn);
+            }
+
             preview.appendChild(item);
             lucide.createIcons(); // Re-render icons
         }
-        
-        window.downloadSingle = function(codiceArticolo) {
-            const barcode = generatedBarcodes.find(b => b.codiceArticolo === codiceArticolo);
-            if (barcode) {
-                downloadFile(barcode.filename, barcode.content);
-            }
-        };
-        
+
         function downloadFile(filename, content) {
             const blob = new Blob([content], { type: 'application/postscript' });
             const url = URL.createObjectURL(blob);

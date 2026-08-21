@@ -45,6 +45,11 @@ in a browser, or drop `php-image-converter/php-image-converter.php` on a PHP ser
 nothing outside its own folder is required to run it. See each folder's own README for
 full setup and usage instructions.
 
+Both tools have been hardened against the injection/XSS/upload-abuse classes of bugs that this
+kind of "paste your data in, get a file out" tool is typically exposed to (strict input
+validation, CSRF protection, a Content-Security-Policy, sanitized filenames, size limits — see
+each folder's own README for the specifics that apply to it).
+
 ### Licence
 
 The whole repository, including every tool folder, is distributed under the **MIT
@@ -95,6 +100,11 @@ Ogni cartella è autonoma: si può aprire direttamente
 `php-image-converter/php-image-converter.php` su un server PHP — non serve nient'altro
 al di fuori della propria cartella per farlo funzionare. Per le istruzioni complete di
 installazione e uso vedi il README di ciascuna cartella.
+
+Entrambi i tool sono stati messi in sicurezza contro le classi di bug tipiche di questo genere di
+strumenti "incolli i tuoi dati, ottieni un file" (injection, XSS, abuso degli upload): validazione
+rigorosa degli input, protezione CSRF, una Content-Security-Policy, nomi file sanificati, limiti
+dimensionali — per i dettagli specifici vedi il README di ciascuna cartella.
 
 ### Licenza
 

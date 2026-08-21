@@ -66,7 +66,9 @@ Use `example.xlsx` as an example. The structure must be:
 
 ### Maximum number of barcodes
 
-**Theoretical limit: ~10,000 barcodes**
+**Hard limit: 5,000 rows per file** (enforced by the app, to avoid freezing the browser tab).
+Uploading a spreadsheet with more rows is rejected up front with a clear error message — split it
+into multiple files instead. The app also rejects source files over 20 MB before reading them.
 
 The limit depends on:
 - **Available RAM** - Each barcode takes ~5-10 KB in memory
@@ -76,8 +78,6 @@ The limit depends on:
 **Practical recommendations:**
 - ✅ **< 1,000 barcodes** - No problem, fast generation
 - ⚠️ **1,000 - 5,000 barcodes** - Works well, may take 10-30 seconds
-- ⚠️ **5,000 - 10,000 barcodes** - Possible, but requires time and lots of RAM
-- ❌ **> 10,000 barcodes** - Not recommended, better to split into multiple files
 
 ### ZIP file
 
@@ -217,6 +217,25 @@ barcode_eps_1234567890.zip
 
 The application processes files entirely in the local browser. No information is transmitted over the internet.
 
+**Hardening applied in this version:**
+- **Strict barcode validation** — a barcode is only accepted if it is 12 or 13 digits. This closes
+  off a PostScript-injection vector: without it, a crafted spreadsheet cell (parentheses,
+  backslashes, PostScript operators) could have been embedded verbatim into the generated `.eps`
+  file and executed by whatever tool later opens/rasterizes it.
+- **XSS-safe rendering** — every value read from the uploaded spreadsheet (article code, barcode,
+  error messages) is written to the page with `textContent`, never `innerHTML` or an inline
+  `onclick` string. A malicious cell content can no longer run script in your browser.
+- **Sanitized filenames** — the article code is stripped of path separators and control characters
+  before being used as a filename or as a ZIP entry, and duplicate codes are automatically
+  de-duplicated instead of silently overwriting each other in the ZIP.
+- **Content-Security-Policy** — the page ships a strict CSP: only the exact three CDN scripts and
+  this page's own script (identified by SHA-256 hash) are allowed to run; everything else is
+  denied by default.
+- **Size limits** — files over 20 MB or spreadsheets with more than 5,000 rows are rejected up
+  front with a clear message, instead of freezing the browser tab.
+- **Pinned dependency** — the Lucide icons library is now loaded from a fixed version instead of
+  `@latest`, so its code can no longer change under you without notice.
+
 ---
 
 ## 💾 SHARING
@@ -232,7 +251,15 @@ You can share the entire folder with colleagues:
 
 ## 📝 CHANGELOG
 
-### Version 2.0 (Current)
+### Version 2.1 (Current) — Hardened Edition
+- 🔒 Strict digit-only barcode validation (blocks PostScript injection into the EPS output)
+- 🔒 XSS-safe DOM rendering (no more `innerHTML`/`onclick` with data from the spreadsheet)
+- 🔒 Sanitized, de-duplicated filenames for downloads and ZIP entries
+- 🔒 Strict Content-Security-Policy (hash-pinned inline script, whitelisted CDN origins)
+- 🔒 Lucide icons pinned to a fixed version instead of `@latest`
+- ✨ File-size (20 MB) and row-count (5,000) limits, with clear error messages
+
+### Version 2.0
 - ✨ New minimal design inspired by Lucide
 - ✨ Professional vector icons
 - ✨ Blue color palette
@@ -338,7 +365,9 @@ Usa il file `example.xlsx` come esempio. La struttura deve essere:
 
 ### Numero massimo di barcode
 
-**Limite teorico: ~10.000 barcode**
+**Limite rigido: 5.000 righe per file** (imposto dall'app, per evitare di bloccare la scheda del
+browser). Un foglio con più righe viene rifiutato subito con un messaggio d'errore chiaro — meglio
+dividerlo in più file. L'app rifiuta anche i file sorgente oltre i 20 MB prima ancora di leggerli.
 
 Il limite dipende da:
 - **Memoria RAM disponibile** - Ogni barcode occupa ~5-10 KB in memoria
@@ -348,8 +377,6 @@ Il limite dipende da:
 **Consigli pratici:**
 - ✅ **< 1.000 barcode** - Nessun problema, generazione veloce
 - ⚠️ **1.000 - 5.000 barcode** - Funziona bene, potrebbe richiedere 10-30 secondi
-- ⚠️ **5.000 - 10.000 barcode** - Possibile, ma richiede tempo e molta RAM
-- ❌ **> 10.000 barcode** - Sconsigliato, meglio dividere in più file
 
 ### File ZIP
 
@@ -489,6 +516,26 @@ barcode_eps_1234567890.zip
 
 L'applicazione elabora i file completamente nel browser locale. Nessuna informazione viene trasmessa su internet.
 
+**Interventi di hardening in questa versione:**
+- **Validazione rigorosa del barcode** — viene accettato solo se composto da 12 o 13 cifre
+  numeriche. Questo chiude un possibile vettore di injection PostScript: senza questo controllo,
+  una cella del foglio Excel opportunamente costruita (parentesi, backslash, operatori
+  PostScript) poteva finire tale e quale nel file `.eps` generato e venire eseguita da qualunque
+  strumento lo apra o lo rasterizzi in seguito.
+- **Rendering sicuro contro XSS** — ogni valore letto dal file caricato (codice articolo, barcode,
+  messaggi d'errore) viene scritto nella pagina con `textContent`, mai con `innerHTML` o stringhe
+  `onclick`. Il contenuto di una cella malevola non può più eseguire script nel browser.
+- **Nomi file sanificati** — il codice articolo viene ripulito da separatori di percorso e
+  caratteri di controllo prima di essere usato come nome file o voce dello ZIP, e i codici
+  duplicati vengono automaticamente resi univoci invece di sovrascriversi in silenzio nello ZIP.
+- **Content-Security-Policy** — la pagina applica una CSP rigorosa: possono essere eseguiti solo i
+  tre script CDN esatti e lo script di questa pagina (identificato tramite hash SHA-256); tutto il
+  resto è negato di default.
+- **Limiti dimensionali** — file oltre i 20 MB o fogli con più di 5.000 righe vengono rifiutati
+  subito con un messaggio chiaro, invece di bloccare la scheda del browser.
+- **Dipendenza fissata** — la libreria di icone Lucide viene ora caricata da una versione fissa
+  invece di `@latest`, così il suo codice non può più cambiare a tua insaputa.
+
 ---
 
 ## 💾 CONDIVISIONE
@@ -504,7 +551,15 @@ Puoi condividere l'intera cartella con colleghi:
 
 ## 📝 CHANGELOG
 
-### Versione 2.0 (Attuale)
+### Versione 2.1 (Attuale) — Edizione Rinforzata
+- 🔒 Validazione rigorosa del barcode (blocca l'injection PostScript nel file EPS generato)
+- 🔒 Rendering DOM sicuro contro XSS (niente più `innerHTML`/`onclick` con dati del foglio Excel)
+- 🔒 Nomi file sanificati e resi univoci per download e voci ZIP
+- 🔒 Content-Security-Policy rigorosa (script inline ancorato via hash, origini CDN in whitelist)
+- 🔒 Icone Lucide fissate a una versione precisa invece di `@latest`
+- ✨ Limiti su dimensione file (20 MB) e numero di righe (5.000), con messaggi d'errore chiari
+
+### Versione 2.0
 - ✨ Nuovo design minimale ispirato a Lucide
 - ✨ Icone vettoriali professionali
 - ✨ Palette azzurro/blu
