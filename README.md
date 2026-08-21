@@ -1,7 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/tools-2-blue" alt="Tools">
-  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="License: MIT">
-  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational" alt="Maintainer">
+  <img src="assets/banner.svg" alt="Utility Forge" width="100%">
 </p>
 
 <h1 align="center">🛠️ Utility Forge</h1>
@@ -13,6 +11,18 @@
 
 <p align="center">
   🇬🇧 <a href="#english">English</a> · 🇮🇹 <a href="#italiano">Italiano</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="Tools">
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge" alt="License: MIT">
+  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational?style=for-the-badge" alt="Maintainer">
+</p>
+
+<p align="center">
+  <b>If you find these tools useful, consider supporting the project:</b><br>
+  <b>Se questi tool ti sono utili, considera di supportare il progetto:</b><br><br>
+  <a href="https://www.paypal.me/chiaraberti13"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate"></a>
 </p>
 
 ---
@@ -44,6 +54,11 @@ Each folder is self-contained: open `barcode-eps-wizard/barcode-eps-wizard.html`
 in a browser, or drop `php-image-converter/php-image-converter.php` on a PHP server —
 nothing outside its own folder is required to run it. See each folder's own README for
 full setup and usage instructions.
+
+Both tools have been hardened against the injection/XSS/upload-abuse classes of bugs that this
+kind of "paste your data in, get a file out" tool is typically exposed to (strict input
+validation, CSRF protection, a Content-Security-Policy, sanitized filenames, size limits — see
+each folder's own README for the specifics that apply to it).
 
 ### Licence
 
@@ -95,6 +110,11 @@ Ogni cartella è autonoma: si può aprire direttamente
 `php-image-converter/php-image-converter.php` su un server PHP — non serve nient'altro
 al di fuori della propria cartella per farlo funzionare. Per le istruzioni complete di
 installazione e uso vedi il README di ciascuna cartella.
+
+Entrambi i tool sono stati messi in sicurezza contro le classi di bug tipiche di questo genere di
+strumenti "incolli i tuoi dati, ottieni un file" (injection, XSS, abuso degli upload): validazione
+rigorosa degli input, protezione CSRF, una Content-Security-Policy, nomi file sanificati, limiti
+dimensionali — per i dettagli specifici vedi il README di ciascuna cartella.
 
 ### Licenza
 

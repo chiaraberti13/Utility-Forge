@@ -1,16 +1,35 @@
 <?php
 /**
  * Image Converter by Chiara Berti
- * PHP 8 Version - All-in-One File
+ * PHP 8 Version - All-in-One File - Hardened Edition
  *
  * Requirements:
  * - PHP 8.2+ (tested up to 8.4)
  * - GD Library (php-gd)
  * - ImageMagick extension (php-imagick) - Recommended for TIFF/HEIC support
  * - ZipArchive support
+ *
+ * Security notes:
+ * - Every state-changing request (upload, convert, remove, ...) requires a
+ *   per-session CSRF token.
+ * - Uploaded files are validated by their real content (finfo + getimagesize),
+ *   not just by their extension.
+ * - Any filename coming from the client (original name, prefix/suffix) is
+ *   sanitized before being reused in an HTTP header, on disk or inside the ZIP
+ *   archive, to prevent header injection and "zip slip" path traversal.
+ * - Image dimensions are capped to prevent decompression-bomb style memory
+ *   exhaustion.
  */
 
-// Configurazione
+// --- Sessione sicura: va configurata PRIMA di session_start() ---
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+ini_set('session.use_strict_mode', '1');
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Strict');
+ini_set('session.cookie_secure', $isHttps ? '1' : '0');
+
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Disabilita in produzione
@@ -19,21 +38,132 @@ ini_set('max_execution_time', 300);
 ini_set('upload_max_filesize', '100M');
 ini_set('post_max_size', '100M');
 
+// --- Header di sicurezza per ogni risposta ---
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; base-uri 'none'; form-action 'self'");
+header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
+
 // Costanti
 define('MAX_FILE_SIZE_MB', 100);
 define('MAX_FILE_SIZE_BYTES', MAX_FILE_SIZE_MB * 1024 * 1024);
+define('MAX_FILES_PER_SESSION', 100); // limita l'abuso/esaurimento risorse
+define('MAX_IMAGE_MEGAPIXELS', 60); // protegge da immagini "decompression bomb"
+define('MAX_OUTPUT_DIMENSION', 10000); // px, per resize/crop
 define('UPLOAD_DIR', sys_get_temp_dir() . '/image_converter_' . session_id() . '/');
-define('SUPPORTED_FORMATS', ['JPG', 'PNG', 'WEBP', 'BMP', 'TIFF', 'GIF']);
 define('SUPPORTED_INPUT_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'tiff', 'tif', 'heic', 'heif']);
 
-// Crea directory di upload se non esiste
-if (!file_exists(UPLOAD_DIR)) {
-    mkdir(UPLOAD_DIR, 0755, true);
+/**
+ * Formati di output disponibili, calcolati in base a cosa il server supporta
+ * davvero a runtime (es. AVIF richiede PHP 8.1+ con libavif).
+ */
+function getSupportedOutputFormats(): array {
+    $formats = ['JPG', 'PNG', 'WEBP', 'BMP', 'GIF'];
+    if (extension_loaded('imagick')) {
+        $formats[] = 'TIFF';
+    }
+    if (function_exists('imageavif')) {
+        $formats[] = 'AVIF'; // formato avanzato, più efficiente di WEBP a parità di qualità
+    }
+    return $formats;
 }
+define('SUPPORTED_FORMATS', getSupportedOutputFormats());
+
+// Crea directory di upload se non esiste, leggibile/scrivibile solo dal processo PHP
+if (!file_exists(UPLOAD_DIR)) {
+    mkdir(UPLOAD_DIR, 0700, true);
+}
+chmod(UPLOAD_DIR, 0700);
 
 // Inizializza sessione file
 if (!isset($_SESSION['files'])) {
     $_SESSION['files'] = [];
+}
+
+// --- CSRF token: richiesto su ogni endpoint che modifica lo stato ---
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+function requireValidCsrfToken(): void {
+    $token = $_POST['csrf_token'] ?? '';
+    if (!is_string($token) || $token === '' || !hash_equals($_SESSION['csrf_token'], $token)) {
+        header('Content-Type: application/json');
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Token di sicurezza mancante o non valido, ricarica la pagina']);
+        exit;
+    }
+}
+
+/**
+ * Rimuove ogni carattere pericoloso da un nome fornito dal client, così che
+ * possa essere riusato in sicurezza in un header HTTP, su disco o come voce
+ * di un archivio ZIP (previene header injection e "zip slip").
+ */
+function sanitizeFilenameComponent(string $name, string $fallback = 'file'): string {
+    $name = basename($name);
+    // Rimuove caratteri di controllo, CR/LF e caratteri riservati (header/Windows/ZIP)
+    $name = preg_replace('/[\x00-\x1F\x7F"\\\\\/:*?<>|]/', '', $name) ?? '';
+    $name = trim($name, " .\t");
+    if ($name === '') {
+        $name = $fallback;
+    }
+    return mb_substr($name, 0, 180);
+}
+
+/**
+ * Costruisce un header Content-Disposition sicuro (RFC 6266), con fallback
+ * ASCII e nome UTF-8 percent-encoded, a partire da un nome file arbitrario.
+ */
+function buildContentDispositionHeader(string $filename): string {
+    $filename = sanitizeFilenameComponent($filename, 'download');
+    $asciiFallback = preg_replace('/[^\x20-\x7E]/', '_', $filename) ?? 'download';
+    $asciiFallback = str_replace(['"', '\\'], '_', $asciiFallback);
+    $encoded = rawurlencode($filename);
+    return 'Content-Disposition: attachment; filename="' . $asciiFallback . '"; filename*=UTF-8\'\'' . $encoded;
+}
+
+/**
+ * Valida un file caricato in base al contenuto reale (non solo all'estensione
+ * dichiarata) e ne limita le dimensioni per evitare "decompression bomb".
+ */
+function validateUploadedImage(array $file): array {
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    if (!in_array($extension, SUPPORTED_INPUT_EXTENSIONS, true)) {
+        return ['valid' => false, 'error' => 'Tipo di file non supportato'];
+    }
+
+    $allowedMimes = [
+        'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'],
+        'png' => ['image/png'],
+        'webp' => ['image/webp'],
+        'gif' => ['image/gif'],
+        'bmp' => ['image/bmp', 'image/x-ms-bmp'],
+        'tiff' => ['image/tiff'], 'tif' => ['image/tiff'],
+        // libmagic spesso riconosce HEIC/HEIF come octet-stream: viene comunque
+        // validato più avanti da Imagick/getimagesize prima di essere elaborato.
+        'heic' => ['image/heic', 'image/heif', 'application/octet-stream'],
+        'heif' => ['image/heif', 'image/heic', 'application/octet-stream'],
+    ];
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $realMime = $finfo->file($file['tmp_name']) ?: '';
+
+    if (!in_array($realMime, $allowedMimes[$extension] ?? [], true)) {
+        return ['valid' => false, 'error' => 'Il contenuto del file non corrisponde all\'estensione dichiarata'];
+    }
+
+    $dimensions = @getimagesize($file['tmp_name']);
+    if ($dimensions !== false) {
+        $megapixels = ($dimensions[0] * $dimensions[1]) / 1_000_000;
+        if ($megapixels > MAX_IMAGE_MEGAPIXELS) {
+            return ['valid' => false, 'error' => 'Immagine troppo grande (oltre ' . MAX_IMAGE_MEGAPIXELS . ' megapixel)'];
+        }
+    }
+
+    return ['valid' => true];
 }
 
 /**
@@ -67,7 +197,8 @@ class ImageConverter {
             
             $width = imagesx($image);
             $height = imagesy($image);
-            
+            $this->assertSafeDimensions($width, $height);
+
             // Applica crop se necessario
             if ($cropOptions && $cropOptions['enabled'] && $cropOptions['aspectRatio']) {
                 $image = $this->applyCrop($image, $width, $height, $cropOptions['aspectRatio']);
@@ -160,9 +291,29 @@ class ImageConverter {
     }
 
     /**
+     * Verifica che le dimensioni richieste non permettano un esaurimento di
+     * memoria ("decompression bomb") o richieste di output abnormi.
+     */
+    private function assertSafeDimensions(float $width, float $height): void {
+        if ($width < 1 || $height < 1) {
+            throw new Exception('Dimensioni immagine non valide');
+        }
+        if ($width > MAX_OUTPUT_DIMENSION || $height > MAX_OUTPUT_DIMENSION) {
+            throw new Exception('Dimensioni richieste troppo grandi (max ' . MAX_OUTPUT_DIMENSION . 'px per lato)');
+        }
+        if (($width * $height) > (MAX_IMAGE_MEGAPIXELS * 1_000_000)) {
+            throw new Exception('Immagine risultante troppo grande (max ' . MAX_IMAGE_MEGAPIXELS . ' megapixel)');
+        }
+    }
+
+    /**
      * Applica ritaglio all'immagine
      */
     private function applyCrop(\GdImage $image, int $width, int $height, string $aspectRatio): \GdImage {
+        $allowedRatios = ['1:1', '16:9', '9:16', '4:3', '3:4'];
+        if (!in_array($aspectRatio, $allowedRatios, true)) {
+            $aspectRatio = '1:1';
+        }
         list($ratioW, $ratioH) = explode(':', $aspectRatio);
         $targetRatio = (float)$ratioW / (float)$ratioH;
         $imageRatio = $width / $height;
@@ -182,6 +333,7 @@ class ImageConverter {
             $sourceY = ($height - $sourceHeight) / 2;
         }
         
+        $this->assertSafeDimensions($sourceWidth, $sourceHeight);
         $croppedImage = imagecreatetruecolor((int)$sourceWidth, (int)$sourceHeight);
         
         // Preserva trasparenza per PNG
@@ -204,8 +356,8 @@ class ImageConverter {
      * Applica ridimensionamento all'immagine
      */
     private function applyResize(\GdImage $image, int $width, int $height, array $resizeOptions): \GdImage {
-        $targetWidth = $resizeOptions['width'];
-        $targetHeight = $resizeOptions['height'];
+        $targetWidth = $resizeOptions['width'] ? min((int)$resizeOptions['width'], MAX_OUTPUT_DIMENSION) : null;
+        $targetHeight = $resizeOptions['height'] ? min((int)$resizeOptions['height'], MAX_OUTPUT_DIMENSION) : null;
         
         // Calcola dimensioni mantenendo aspect ratio se necessario
         if ($targetWidth && $targetHeight) {
@@ -227,6 +379,7 @@ class ImageConverter {
             return $image;
         }
         
+        $this->assertSafeDimensions($newWidth, $newHeight);
         $resizedImage = imagecreatetruecolor((int)$newWidth, (int)$newHeight);
         
         // Preserva trasparenza per PNG
@@ -293,7 +446,15 @@ class ImageConverter {
                 case 'GIF':
                     $success = imagegif($image, $outputPath);
                     break;
-                    
+
+                case 'AVIF':
+                    if (!function_exists('imageavif')) {
+                        throw new Exception("AVIF non supportato su questo server");
+                    }
+                    imagesavealpha($image, true);
+                    $success = imageavif($image, $outputPath, $quality);
+                    break;
+
                 case 'BMP':
                     // Crea sfondo bianco per BMP (no trasparenza)
                     $bmpImage = imagecreatetruecolor(imagesx($image), imagesy($image));
@@ -392,20 +553,18 @@ function generateFilename(string $originalName, string $targetFormat, array $nam
         $extension = 'png';
     }
     
-    switch ($namingConvention['type']) {
-        case 'prefix':
-            return $namingConvention['prefix'] . $nameWithoutExtension . '.' . $extension;
-        case 'suffix':
-            return $nameWithoutExtension . $namingConvention['suffix'] . '.' . $extension;
-        case 'preserve':
-        default:
-            return $nameWithoutExtension . '.' . $extension;
-    }
-}
+    // Prefisso/suffisso sono già sanificati in updateNaming; ri-sanifichiamo comunque
+    // qui in difesa in profondità, dato che il risultato finisce in header HTTP e ZIP.
+    $prefix = sanitizeFilenameComponent($namingConvention['prefix'] ?? 'converted_', 'converted_');
+    $suffix = sanitizeFilenameComponent($namingConvention['suffix'] ?? '_converted', '_converted');
 
-function isValidImageFile(array $file): bool {
-    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    return in_array($extension, SUPPORTED_INPUT_EXTENSIONS, true);
+    $result = match ($namingConvention['type']) {
+        'prefix' => $prefix . $nameWithoutExtension . '.' . $extension,
+        'suffix' => $nameWithoutExtension . $suffix . '.' . $extension,
+        default => $nameWithoutExtension . '.' . $extension,
+    };
+
+    return sanitizeFilenameComponent($result, 'converted.' . $extension);
 }
 
 function cleanupOldFiles(): void {
@@ -427,18 +586,28 @@ function cleanupOldFiles(): void {
 // Upload file
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload') {
     header('Content-Type: application/json');
-    
+    requireValidCsrfToken();
+
     if (!isset($_FILES['files'])) {
         echo json_encode(['success' => false, 'error' => 'Nessun file caricato']);
         exit;
     }
-    
+
     $uploadedFiles = [];
     $files = $_FILES['files'];
-    
+
     // Gestisci upload multipli
     if (is_array($files['name'])) {
         for ($i = 0; $i < count($files['name']); $i++) {
+            if (count($_SESSION['files']) >= MAX_FILES_PER_SESSION) {
+                $uploadedFiles[] = [
+                    'success' => false,
+                    'filename' => $files['name'][$i],
+                    'error' => 'Limite di ' . MAX_FILES_PER_SESSION . ' file per sessione raggiunto'
+                ];
+                continue;
+            }
+
             $file = [
                 'name' => $files['name'][$i],
                 'type' => $files['type'][$i],
@@ -446,17 +615,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
                 'error' => $files['error'][$i],
                 'size' => $files['size'][$i]
             ];
-            
+
             if ($file['error'] === UPLOAD_ERR_OK) {
-                if (!isValidImageFile($file)) {
+                // Verifica il contenuto reale del file (magic bytes), non solo l'estensione
+                $validation = validateUploadedImage($file);
+                if (!$validation['valid']) {
                     $uploadedFiles[] = [
                         'success' => false,
                         'filename' => $file['name'],
-                        'error' => 'Tipo di file non supportato'
+                        'error' => $validation['error']
                     ];
                     continue;
                 }
-                
+
                 if ($file['size'] > MAX_FILE_SIZE_BYTES) {
                     $uploadedFiles[] = [
                         'success' => false,
@@ -465,37 +636,38 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
                     ];
                     continue;
                 }
-                
+
+                $safeName = sanitizeFilenameComponent($file['name'], 'image');
                 $fileId = uniqid('file_', true);
-                $destination = UPLOAD_DIR . $fileId . '_' . basename($file['name']);
-                
+                $destination = UPLOAD_DIR . $fileId . '_' . $safeName;
+
                 if (move_uploaded_file($file['tmp_name'], $destination)) {
                     $_SESSION['files'][$fileId] = [
                         'id' => $fileId,
-                        'originalName' => $file['name'],
+                        'originalName' => $safeName,
                         'originalSize' => $file['size'],
                         'path' => $destination,
                         'targetFormat' => 'PNG',
                         'status' => 'waiting'
                     ];
-                    
+
                     $uploadedFiles[] = [
                         'success' => true,
                         'id' => $fileId,
-                        'filename' => $file['name'],
+                        'filename' => $safeName,
                         'size' => $file['size']
                     ];
                 } else {
                     $uploadedFiles[] = [
                         'success' => false,
-                        'filename' => $file['name'],
+                        'filename' => $safeName,
                         'error' => 'Errore durante il caricamento'
                     ];
                 }
             }
         }
     }
-    
+
     echo json_encode(['success' => true, 'files' => $uploadedFiles]);
     exit;
 }
@@ -503,28 +675,37 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
 // Converti file
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'convert') {
     header('Content-Type: application/json');
-    
+    requireValidCsrfToken();
+
     $fileId = $_POST['fileId'] ?? '';
     $targetFormat = strtoupper($_POST['targetFormat'] ?? 'PNG');
-    $quality = (int)($_POST['quality'] ?? 92);
-    
+
+    if (!in_array($targetFormat, SUPPORTED_FORMATS, true)) {
+        echo json_encode(['success' => false, 'error' => 'Formato di output non supportato']);
+        exit;
+    }
+
+    $quality = max(1, min(100, (int)($_POST['quality'] ?? 92)));
+
     $resizeOptions = null;
     if (isset($_POST['resizeEnabled']) && $_POST['resizeEnabled'] === 'true') {
         $resizeOptions = [
             'enabled' => true,
-            'width' => !empty($_POST['resizeWidth']) ? (int)$_POST['resizeWidth'] : null,
-            'height' => !empty($_POST['resizeHeight']) ? (int)$_POST['resizeHeight'] : null
+            'width' => !empty($_POST['resizeWidth']) ? max(1, min(MAX_OUTPUT_DIMENSION, (int)$_POST['resizeWidth'])) : null,
+            'height' => !empty($_POST['resizeHeight']) ? max(1, min(MAX_OUTPUT_DIMENSION, (int)$_POST['resizeHeight'])) : null
         ];
     }
-    
+
     $cropOptions = null;
     if (isset($_POST['cropEnabled']) && $_POST['cropEnabled'] === 'true') {
+        $allowedRatios = ['1:1', '16:9', '9:16', '4:3', '3:4'];
+        $ratio = $_POST['cropAspectRatio'] ?? '1:1';
         $cropOptions = [
             'enabled' => true,
-            'aspectRatio' => $_POST['cropAspectRatio'] ?? '1:1'
+            'aspectRatio' => in_array($ratio, $allowedRatios, true) ? $ratio : '1:1'
         ];
     }
-    
+
     if (!isset($_SESSION['files'][$fileId])) {
         echo json_encode(['success' => false, 'error' => 'File non trovato']);
         exit;
@@ -581,9 +762,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['action']) && $_
     ];
     
     $downloadName = generateFilename($file['originalName'], $file['targetFormat'], $namingConvention);
-    
+
     header('Content-Type: application/octet-stream');
-    header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+    header(buildContentDispositionHeader($downloadName));
     header('Content-Length: ' . filesize($filePath));
     header('Cache-Control: no-cache, must-revalidate');
     header('Expires: 0');
@@ -663,7 +844,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['action']) && $_
 // Rimuovi file
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'removeFile') {
     header('Content-Type: application/json');
-    
+    requireValidCsrfToken();
+
     $fileId = $_POST['fileId'] ?? '';
     
     if (isset($_SESSION['files'][$fileId])) {
@@ -689,7 +871,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
 // Clear all
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'clearAll') {
     header('Content-Type: application/json');
-    
+    requireValidCsrfToken();
+
     foreach ($_SESSION['files'] as $file) {
         if (file_exists($file['path'])) {
             unlink($file['path']);
@@ -708,10 +891,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
 // Aggiorna formato target
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'updateFormat') {
     header('Content-Type: application/json');
-    
+    requireValidCsrfToken();
+
     $fileId = $_POST['fileId'] ?? '';
     $targetFormat = strtoupper($_POST['targetFormat'] ?? 'PNG');
-    
+
+    if (!in_array($targetFormat, SUPPORTED_FORMATS, true)) {
+        echo json_encode(['success' => false, 'error' => 'Formato non supportato']);
+        exit;
+    }
+
     if (isset($_SESSION['files'][$fileId])) {
         $_SESSION['files'][$fileId]['targetFormat'] = $targetFormat;
         echo json_encode(['success' => true]);
@@ -724,13 +913,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
 // Aggiorna naming convention
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'updateNaming') {
     header('Content-Type: application/json');
-    
+    requireValidCsrfToken();
+
+    $type = $_POST['type'] ?? 'suffix';
+    if (!in_array($type, ['preserve', 'suffix', 'prefix'], true)) {
+        $type = 'suffix';
+    }
+
     $_SESSION['namingConvention'] = [
-        'type' => $_POST['type'] ?? 'suffix',
-        'suffix' => $_POST['suffix'] ?? '_converted',
-        'prefix' => $_POST['prefix'] ?? 'converted_'
+        'type' => $type,
+        'suffix' => sanitizeFilenameComponent($_POST['suffix'] ?? '_converted', '_converted'),
+        'prefix' => sanitizeFilenameComponent($_POST['prefix'] ?? 'converted_', 'converted_')
     ];
-    
+
     echo json_encode(['success' => true]);
     exit;
 }
@@ -1181,7 +1376,7 @@ cleanupOldFiles();
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Trascina i file qui o clicca per selezionarli</div>
-                <div class="upload-hint">Supporta JPG, PNG, WEBP, GIF, BMP, TIFF, HEIC (max <?php echo MAX_FILE_SIZE_MB; ?>MB)</div>
+                <div class="upload-hint">Supporta JPG, PNG, WEBP, GIF, BMP, TIFF, HEIC (max <?php echo MAX_FILE_SIZE_MB; ?>MB a file, max <?php echo MAX_FILES_PER_SESSION; ?> file per sessione)</div>
                 <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
             </div>
             
@@ -1303,14 +1498,26 @@ cleanupOldFiles();
         
         <div class="footer">
             <p style="margin-top: 10px; font-size: 0.9em; color: #999;">
-                Tutte le conversioni avvengono sul server. I tuoi file vengono eliminati automaticamente dopo 1 ora.
+                Tutte le conversioni avvengono sul server. I tuoi file vengono eliminati automaticamente dopo 1 ora.<br>
+                🔒 Ogni file caricato viene verificato in base al contenuto reale, non solo all'estensione; la
+                conversione ricodifica sempre l'immagine, quindi eventuali metadati EXIF/GPS dell'originale non
+                vengono trasferiti nel file convertito.
             </p>
         </div>
     </div>
 
     <script>
+        // Token anti-CSRF, generato lato server e richiesto da ogni chiamata che modifica lo stato
+        const CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>';
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = String(value ?? '');
+            return div.innerHTML;
+        }
+
         let files = {};
-        
+
         // Setup upload area
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -1380,7 +1587,8 @@ cleanupOldFiles();
             });
             
             formData.append('action', 'upload');
-            
+            formData.append('csrf_token', CSRF_TOKEN);
+
             fetch('', {
                 method: 'POST',
                 body: formData
@@ -1421,7 +1629,7 @@ cleanupOldFiles();
                 fileItem.className = 'file-item';
                 fileItem.innerHTML = `
                     <div class="file-info">
-                        <div class="file-name">${file.originalName}</div>
+                        <div class="file-name">${escapeHtml(file.originalName)}</div>
                         <div class="file-size">${formatFileSize(file.originalSize)}</div>
                         <div class="file-status status-${file.status.toLowerCase()}">${getStatusText(file.status)}</div>
                         <div class="progress-bar">
@@ -1470,7 +1678,8 @@ cleanupOldFiles();
             formData.append('action', 'updateFormat');
             formData.append('fileId', fileId);
             formData.append('targetFormat', format);
-            
+            formData.append('csrf_token', CSRF_TOKEN);
+
             fetch('', {
                 method: 'POST',
                 body: formData
@@ -1487,7 +1696,8 @@ cleanupOldFiles();
             formData.append('type', type);
             formData.append('suffix', suffix);
             formData.append('prefix', prefix);
-            
+            formData.append('csrf_token', CSRF_TOKEN);
+
             fetch('', {
                 method: 'POST',
                 body: formData
@@ -1498,7 +1708,8 @@ cleanupOldFiles();
             const formData = new FormData();
             formData.append('action', 'removeFile');
             formData.append('fileId', fileId);
-            
+            formData.append('csrf_token', CSRF_TOKEN);
+
             fetch('', {
                 method: 'POST',
                 body: formData
@@ -1521,7 +1732,8 @@ cleanupOldFiles();
             
             const formData = new FormData();
             formData.append('action', 'clearAll');
-            
+            formData.append('csrf_token', CSRF_TOKEN);
+
             fetch('', {
                 method: 'POST',
                 body: formData
@@ -1567,6 +1779,7 @@ cleanupOldFiles();
             formData.append('fileId', fileId);
             formData.append('targetFormat', files[fileId].targetFormat);
             formData.append('quality', document.getElementById('quality').value);
+            formData.append('csrf_token', CSRF_TOKEN);
             
             // Resize options
             if (document.getElementById('resizeEnabled').checked) {

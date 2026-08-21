@@ -2,14 +2,19 @@
 
 > 🇬🇧 **English** | 🇮🇹 [Italiano](#-generatore-barcode-eps-italiano)
 
-Standalone web app to generate EAN-13 barcodes in EPS format from Excel. No installation, works offline, bulk ZIP download. Perfect for Adobe Illustrator workflows.
+A single self-contained HTML page that turns an Excel/CSV list of article codes and barcodes into
+ready-to-print **EAN-13 barcodes in vector EPS format** — in bulk, with a one-click ZIP download.
+Everything runs client-side, in your own browser: no upload, no server, no account, and the input
+spreadsheet never leaves your machine. Designed for graphic/prepress workflows (Adobe Illustrator,
+CorelDRAW, Inkscape) where you need dozens or hundreds of print-ready barcode files at once instead
+of generating them one by one.
 
 ---
 
 ## 🎯 COMPLETE PACKAGE
 
 This package contains:
-- **`barcode-eps-wizard.html`** - The complete web application
+- **`barcode-eps-wizard.html`** - The complete web application (this is the only file you need to run it)
 - **`example.xlsx`** - Sample Excel file with correct structure
 - **`LICENSE`** - MIT License
 - **`README.md`** - This documentation (English + Italian)
@@ -23,6 +28,16 @@ This is a **completely standalone** web app. You don't need to install:
 - ❌ Libraries or dependencies
 - ❌ Additional software
 
+Two ways to use it, both work equally well:
+
+- **Locally, on your own computer** — just double-click `barcode-eps-wizard.html`; it opens in
+  your default browser and everything (Excel parsing, EPS generation, ZIP packaging) happens
+  entirely in that browser tab.
+- **Shared on a team/intranet server** — since it's a single static HTML file, you can also drop
+  it on any plain web server (or an internal file share, or a static host like GitHub Pages) so
+  colleagues can reach it at a URL instead of each needing their own copy. No backend, no build
+  step, no server-side language required.
+
 **Just open the HTML file in your browser!**
 
 ---
@@ -30,11 +45,19 @@ This is a **completely standalone** web app. You don't need to install:
 ## 🚀 HOW TO USE IN 3 STEPS
 
 ### Step 1: Open the application
-1. **Double-click** on `barcode-eps-wizard.html`
+1. **Double-click** on `barcode-eps-wizard.html` (or open its URL, if hosted on a server)
 2. It will automatically open in your default browser
-3. Works with: Chrome, Firefox, Safari, Edge
+3. Works with: Chrome, Firefox, Safari, Edge (any modern, up-to-date browser)
 
-💡 **Note:** Internet connection required only for first load (to download icons). After first launch, the app can work offline.
+💡 **Note:** the page loads three small libraries (Excel parsing, ZIP creation, icons) from a CDN
+over the internet each time you open it, so you do need a connection to load the page itself. The
+processing that happens *after* it has loaded — reading your Excel file and generating the EPS
+barcodes — never sends anything back over the network.
+
+✅ **How to tell it loaded correctly:** if you see the barcode icon and the upload area with its
+icon in the top-left, the libraries loaded fine. If the layout looks unstyled or icons are
+missing, check your connection and reload — see the "Troubleshooting" section further down if it
+persists.
 
 ### Step 2: Prepare your Excel file
 Use `example.xlsx` as an example. The structure must be:
@@ -66,7 +89,9 @@ Use `example.xlsx` as an example. The structure must be:
 
 ### Maximum number of barcodes
 
-**Theoretical limit: ~10,000 barcodes**
+**Hard limit: 5,000 rows per file** (enforced by the app, to avoid freezing the browser tab).
+Uploading a spreadsheet with more rows is rejected up front with a clear error message — split it
+into multiple files instead. The app also rejects source files over 20 MB before reading them.
 
 The limit depends on:
 - **Available RAM** - Each barcode takes ~5-10 KB in memory
@@ -76,8 +101,6 @@ The limit depends on:
 **Practical recommendations:**
 - ✅ **< 1,000 barcodes** - No problem, fast generation
 - ⚠️ **1,000 - 5,000 barcodes** - Works well, may take 10-30 seconds
-- ⚠️ **5,000 - 10,000 barcodes** - Possible, but requires time and lots of RAM
-- ❌ **> 10,000 barcodes** - Not recommended, better to split into multiple files
 
 ### ZIP file
 
@@ -217,6 +240,25 @@ barcode_eps_1234567890.zip
 
 The application processes files entirely in the local browser. No information is transmitted over the internet.
 
+**Hardening applied in this version:**
+- **Strict barcode validation** — a barcode is only accepted if it is 12 or 13 digits. This closes
+  off a PostScript-injection vector: without it, a crafted spreadsheet cell (parentheses,
+  backslashes, PostScript operators) could have been embedded verbatim into the generated `.eps`
+  file and executed by whatever tool later opens/rasterizes it.
+- **XSS-safe rendering** — every value read from the uploaded spreadsheet (article code, barcode,
+  error messages) is written to the page with `textContent`, never `innerHTML` or an inline
+  `onclick` string. A malicious cell content can no longer run script in your browser.
+- **Sanitized filenames** — the article code is stripped of path separators and control characters
+  before being used as a filename or as a ZIP entry, and duplicate codes are automatically
+  de-duplicated instead of silently overwriting each other in the ZIP.
+- **Content-Security-Policy** — the page ships a strict CSP: only the exact three CDN scripts and
+  this page's own script (identified by SHA-256 hash) are allowed to run; everything else is
+  denied by default.
+- **Size limits** — files over 20 MB or spreadsheets with more than 5,000 rows are rejected up
+  front with a clear message, instead of freezing the browser tab.
+- **Pinned dependency** — the Lucide icons library is now loaded from a fixed version instead of
+  `@latest`, so its code can no longer change under you without notice.
+
 ---
 
 ## 💾 SHARING
@@ -232,7 +274,15 @@ You can share the entire folder with colleagues:
 
 ## 📝 CHANGELOG
 
-### Version 2.0 (Current)
+### Version 2.1 (Current) — Hardened Edition
+- 🔒 Strict digit-only barcode validation (blocks PostScript injection into the EPS output)
+- 🔒 XSS-safe DOM rendering (no more `innerHTML`/`onclick` with data from the spreadsheet)
+- 🔒 Sanitized, de-duplicated filenames for downloads and ZIP entries
+- 🔒 Strict Content-Security-Policy (hash-pinned inline script, whitelisted CDN origins)
+- 🔒 Lucide icons pinned to a fixed version instead of `@latest`
+- ✨ File-size (20 MB) and row-count (5,000) limits, with clear error messages
+
+### Version 2.0
 - ✨ New minimal design inspired by Lucide
 - ✨ Professional vector icons
 - ✨ Blue color palette
@@ -274,14 +324,19 @@ By Chiara Berti - 2026
 
 > 🇬🇧 [English](#-eps-barcode-generator) | 🇮🇹 **Italiano**
 
-Applicazione web standalone per generare barcode EAN-13 in formato EPS da Excel. Nessuna installazione, funziona offline, download ZIP massivo. Perfetto per flussi di lavoro Adobe Illustrator.
+Una singola pagina HTML autonoma che trasforma un elenco Excel/CSV di codici articolo e barcode in
+**barcode EAN-13 pronti per la stampa in formato vettoriale EPS** — in massa, con download ZIP in
+un click. Tutto gira lato client, nel tuo browser: nessun upload, nessun server, nessun account, e
+il file Excel di partenza non lascia mai il tuo computer. Pensato per i flussi di lavoro
+grafici/prestampa (Adobe Illustrator, CorelDRAW, Inkscape) dove servono decine o centinaia di file
+barcode pronti per la stampa tutti insieme, invece di generarli uno alla volta.
 
 ---
 
 ## 🎯 PACCHETTO COMPLETO
 
 Questo pacchetto contiene:
-- **`barcode-eps-wizard.html`** - L'applicazione web completa
+- **`barcode-eps-wizard.html`** - L'applicazione web completa (è l'unico file che ti serve per usarla)
 - **`example.xlsx`** - File Excel di esempio con la struttura corretta
 - **`LICENSE`** - Licenza MIT
 - **`README.md`** - Questa documentazione (Inglese + Italiano)
@@ -295,6 +350,16 @@ Questa è una web app **completamente standalone**. Non devi installare:
 - ❌ Librerie o dipendenze
 - ❌ Software aggiuntivo
 
+Due modi per usarla, entrambi validi:
+
+- **In locale, sul tuo computer** — basta fare doppio click su `barcode-eps-wizard.html`; si apre
+  nel browser predefinito e tutto (lettura dell'Excel, generazione EPS, creazione dello ZIP)
+  avviene interamente in quella scheda del browser.
+- **Condivisa su un server di team/intranet** — essendo un singolo file HTML statico, puoi anche
+  metterla su un qualunque server web (o una condivisione file interna, o un hosting statico come
+  GitHub Pages), così i colleghi la raggiungono con un URL invece di dover avere ciascuno la
+  propria copia. Nessun backend, nessuna build, nessun linguaggio lato server richiesto.
+
 **Basta aprire il file HTML nel browser!**
 
 ---
@@ -302,11 +367,19 @@ Questa è una web app **completamente standalone**. Non devi installare:
 ## 🚀 COME USARE IN 3 PASSI
 
 ### Passo 1: Aprire l'applicazione
-1. Fai **doppio click** sul file `barcode-eps-wizard.html`
+1. Fai **doppio click** sul file `barcode-eps-wizard.html` (oppure apri l'URL, se ospitata su un server)
 2. Si aprirà automaticamente nel tuo browser predefinito
-3. Funziona con: Chrome, Firefox, Safari, Edge
+3. Funziona con: Chrome, Firefox, Safari, Edge (qualsiasi browser moderno e aggiornato)
 
-💡 **Nota:** Serve connessione internet solo per il primo caricamento (per scaricare le icone). Dopo il primo avvio, l'app può funzionare offline.
+💡 **Nota:** la pagina carica tre piccole librerie (lettura Excel, creazione ZIP, icone) da un CDN
+via internet ogni volta che la apri, quindi serve una connessione per caricare la pagina stessa.
+L'elaborazione che avviene *dopo* il caricamento — leggere il tuo file Excel e generare i barcode
+EPS — non invia mai nulla in rete.
+
+✅ **Come capire se si è caricata correttamente:** se vedi l'icona del barcode e l'area di
+caricamento con la sua icona in alto a sinistra, le librerie si sono caricate bene. Se il layout
+sembra senza stile o mancano le icone, controlla la connessione e ricarica — vedi la sezione
+"Risoluzione problemi" più sotto se persiste.
 
 ### Passo 2: Preparare il file Excel
 Usa il file `example.xlsx` come esempio. La struttura deve essere:
@@ -338,7 +411,9 @@ Usa il file `example.xlsx` come esempio. La struttura deve essere:
 
 ### Numero massimo di barcode
 
-**Limite teorico: ~10.000 barcode**
+**Limite rigido: 5.000 righe per file** (imposto dall'app, per evitare di bloccare la scheda del
+browser). Un foglio con più righe viene rifiutato subito con un messaggio d'errore chiaro — meglio
+dividerlo in più file. L'app rifiuta anche i file sorgente oltre i 20 MB prima ancora di leggerli.
 
 Il limite dipende da:
 - **Memoria RAM disponibile** - Ogni barcode occupa ~5-10 KB in memoria
@@ -348,8 +423,6 @@ Il limite dipende da:
 **Consigli pratici:**
 - ✅ **< 1.000 barcode** - Nessun problema, generazione veloce
 - ⚠️ **1.000 - 5.000 barcode** - Funziona bene, potrebbe richiedere 10-30 secondi
-- ⚠️ **5.000 - 10.000 barcode** - Possibile, ma richiede tempo e molta RAM
-- ❌ **> 10.000 barcode** - Sconsigliato, meglio dividere in più file
 
 ### File ZIP
 
@@ -489,6 +562,26 @@ barcode_eps_1234567890.zip
 
 L'applicazione elabora i file completamente nel browser locale. Nessuna informazione viene trasmessa su internet.
 
+**Interventi di hardening in questa versione:**
+- **Validazione rigorosa del barcode** — viene accettato solo se composto da 12 o 13 cifre
+  numeriche. Questo chiude un possibile vettore di injection PostScript: senza questo controllo,
+  una cella del foglio Excel opportunamente costruita (parentesi, backslash, operatori
+  PostScript) poteva finire tale e quale nel file `.eps` generato e venire eseguita da qualunque
+  strumento lo apra o lo rasterizzi in seguito.
+- **Rendering sicuro contro XSS** — ogni valore letto dal file caricato (codice articolo, barcode,
+  messaggi d'errore) viene scritto nella pagina con `textContent`, mai con `innerHTML` o stringhe
+  `onclick`. Il contenuto di una cella malevola non può più eseguire script nel browser.
+- **Nomi file sanificati** — il codice articolo viene ripulito da separatori di percorso e
+  caratteri di controllo prima di essere usato come nome file o voce dello ZIP, e i codici
+  duplicati vengono automaticamente resi univoci invece di sovrascriversi in silenzio nello ZIP.
+- **Content-Security-Policy** — la pagina applica una CSP rigorosa: possono essere eseguiti solo i
+  tre script CDN esatti e lo script di questa pagina (identificato tramite hash SHA-256); tutto il
+  resto è negato di default.
+- **Limiti dimensionali** — file oltre i 20 MB o fogli con più di 5.000 righe vengono rifiutati
+  subito con un messaggio chiaro, invece di bloccare la scheda del browser.
+- **Dipendenza fissata** — la libreria di icone Lucide viene ora caricata da una versione fissa
+  invece di `@latest`, così il suo codice non può più cambiare a tua insaputa.
+
 ---
 
 ## 💾 CONDIVISIONE
@@ -504,7 +597,15 @@ Puoi condividere l'intera cartella con colleghi:
 
 ## 📝 CHANGELOG
 
-### Versione 2.0 (Attuale)
+### Versione 2.1 (Attuale) — Edizione Rinforzata
+- 🔒 Validazione rigorosa del barcode (blocca l'injection PostScript nel file EPS generato)
+- 🔒 Rendering DOM sicuro contro XSS (niente più `innerHTML`/`onclick` con dati del foglio Excel)
+- 🔒 Nomi file sanificati e resi univoci per download e voci ZIP
+- 🔒 Content-Security-Policy rigorosa (script inline ancorato via hash, origini CDN in whitelist)
+- 🔒 Icone Lucide fissate a una versione precisa invece di `@latest`
+- ✨ Limiti su dimensione file (20 MB) e numero di righe (5.000), con messaggi d'errore chiari
+
+### Versione 2.0
 - ✨ Nuovo design minimale ispirato a Lucide
 - ✨ Icone vettoriali professionali
 - ✨ Palette azzurro/blu

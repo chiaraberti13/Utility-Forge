@@ -8,11 +8,12 @@
 
 ## 🇬🇧 English
 
-A powerful, self-contained PHP image converter with an intuitive web interface. Convert images between multiple formats with advanced options like resizing, cropping, and quality control—all in a single PHP file.
+A powerful, self-contained PHP image converter with an intuitive web interface. Convert images between multiple formats with advanced options like resizing, cropping, and quality control — all in a single, hardened PHP file you drop straight onto your own server, with no database and no external service involved.
 
 ### ✨ Key Features
 
-- **🔄 Multiple Format Support**: Convert between JPG, PNG, WEBP, BMP, TIFF, GIF, HEIC/HEIF
+- **🔄 Multiple Format Support**: Convert between JPG, PNG, WEBP, AVIF*, BMP, TIFF, GIF, HEIC/HEIF input
+  (*AVIF output is enabled automatically when the server's GD build supports it, PHP 8.1+)
 - **📦 Batch Processing**: Convert multiple images simultaneously
 - **✂️ Advanced Options**: Resize, crop with aspect ratio presets, quality control
 - **🎯 Smart Cropping**: Pre-defined aspect ratios (1:1, 16:9, 4:3, 21:9, etc.)
@@ -34,18 +35,34 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
 
 ### 🚀 Installation
 
-1. **Download the converter**:
+This tool is a **single, self-contained PHP file**: `php-image-converter.php`. That one file is
+all you need on the server — everything else in this folder (`README.md`, `INSTALL.md`,
+`LICENSE`) is documentation, not required at runtime.
+
+1. **Get the file** — either clone the whole Utility Forge repository and use this folder:
    ```bash
-   git clone https://github.com/yourusername/php-image-converter.git
-   cd php-image-converter
+   git clone https://github.com/chiaraberti13/Utility-Forge.git
+   cd Utility-Forge/php-image-converter
    ```
+   or just download `php-image-converter.php` on its own from the
+   [`php-image-converter/`](.) folder on GitHub.
 
-2. **Upload to your web server**:
-   - Copy `converter.php` to your web directory
-   - Ensure PHP has write permissions for the temp directory
+2. **Upload it to your web server** (FTP/SFTP, `scp`, your host's file manager — whatever you
+   normally use):
+   - Copy `php-image-converter.php` into a web-accessible directory
+   - Make sure the PHP process can write to the system temp directory — it's where uploads and
+     converted files are kept for up to 1 hour before automatic cleanup
 
-3. **Configure PHP (if needed)**:
-   Edit your `php.ini` or use `.htaccess`:
+3. **Check the required PHP extensions are enabled** on the server:
+   ```bash
+   php -m | grep -E "gd|fileinfo|zip|imagick"
+   ```
+   `gd`, `fileinfo` and `zip` are **required**; `imagick` is **optional** (only needed for TIFF
+   output and for some HEIC/HEIF sources GD alone can't decode).
+
+4. **Raise PHP's limits if your host caps them lower than this script needs.** The script already
+   sets these at runtime via `ini_set()`, but a restrictive `php.ini` can still override it — if
+   so, adjust `php.ini`, a per-directory `.user.ini`, or `.htaccess`:
    ```ini
    memory_limit = 512M
    max_execution_time = 300
@@ -53,8 +70,14 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
    post_max_size = 100M
    ```
 
-4. **Access the converter**:
-   Navigate to `http://yourdomain.com/converter.php` in your browser
+5. **Serve it over HTTPS if at all possible.** The session cookie is automatically marked
+   `Secure` the moment the request arrives over HTTPS (directly, or via a reverse proxy sending
+   `X-Forwarded-Proto: https`) — over plain HTTP it still works, just without that extra
+   protection.
+
+6. **Open it**:
+   Navigate to `https://yourdomain.com/php-image-converter.php` in your browser — no setup
+   wizard, no database migration, no account to create.
 
 ### 📖 Usage
 
@@ -97,9 +120,39 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
 
 - **Backend**: Pure PHP with GD Library
 - **Optional**: ImageMagick for HEIC/HEIF and complex TIFF support
-- **Session Management**: Temporary files stored in system temp directory
-- **Security**: File size limits, extension validation, secure file handling
+- **Session Management**: Temporary files stored in system temp directory, in a folder created with
+  `0700` permissions (readable only by the PHP process)
 - **Performance**: Optimized memory usage, configurable timeouts
+
+### 🔒 Security
+
+This tool accepts file uploads and reflects user input back into HTTP headers, disk paths and a
+ZIP archive — all classic injection surfaces for a PHP upload tool. This version hardens each of
+them:
+
+- **CSRF protection**: every state-changing request (upload, convert, rename, remove, clear) must
+  carry a per-session token; requests without a valid token are rejected with `403`.
+- **Real content validation, not just the extension**: each upload is checked with `finfo` against
+  its real MIME type, so a script renamed to `.jpg` is rejected instead of being processed.
+- **Decompression-bomb protection**: images above a configurable megapixel limit are rejected at
+  upload time, and any resize/crop request that would produce an oversized image is rejected
+  before allocating memory for it.
+- **Safe filenames**: the original filename and the naming prefix/suffix are sanitized before
+  being reused as a download filename, an HTTP header, or a ZIP entry — this closes both HTTP
+  header injection and "zip slip" path traversal.
+- **RFC 6266 download headers**: `Content-Disposition` is built with a safe ASCII fallback plus a
+  UTF-8 encoded name, instead of interpolating the filename directly into the header string.
+- **Hardened session cookie**: `HttpOnly`, `SameSite=Strict`, and `Secure` (when served over
+  HTTPS).
+- **Security headers** on every response: `Content-Security-Policy`, `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- **Per-session upload directory** created with `0700` permissions, plus a cap on the number of
+  files a single session can hold.
+- **XSS-safe file list rendering**: filenames shown in the UI are escaped before being inserted
+  into the page.
+
+None of this replaces running the server itself behind HTTPS, keeping PHP/GD/ImageMagick patched,
+and restricting who can reach this script — see *Requirements* above for the baseline.
 
 ### 🌐 Browser Support
 
@@ -120,11 +173,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🇮🇹 Italiano
 
-Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti immagini tra diversi formati con opzioni avanzate come ridimensionamento, ritaglio e controllo della qualità—tutto in un singolo file PHP.
+Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti immagini tra diversi formati con opzioni avanzate come ridimensionamento, ritaglio e controllo della qualità — tutto in un singolo file PHP messo in sicurezza, da caricare direttamente sul tuo server, senza database e senza alcun servizio esterno.
 
 ### ✨ Caratteristiche Principali
 
-- **🔄 Supporto Formati Multipli**: Converti tra JPG, PNG, WEBP, BMP, TIFF, GIF, HEIC/HEIF
+- **🔄 Supporto Formati Multipli**: Converti in JPG, PNG, WEBP, AVIF*, BMP, TIFF, GIF, in input anche HEIC/HEIF
+  (*l'output AVIF si attiva automaticamente se la build di GD del server lo supporta, PHP 8.1+)
 - **📦 Elaborazione Batch**: Converti più immagini contemporaneamente
 - **✂️ Opzioni Avanzate**: Ridimensionamento, ritaglio con proporzioni predefinite, controllo qualità
 - **🎯 Ritaglio Intelligente**: Proporzioni predefinite (1:1, 16:9, 4:3, 21:9, ecc.)
@@ -146,18 +200,35 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
 
 ### 🚀 Installazione
 
-1. **Scarica il convertitore**:
+Questo tool è un **singolo file PHP autonomo**: `php-image-converter.php`. Sul server serve solo
+quel file — tutto il resto in questa cartella (`README.md`, `INSTALL.md`, `LICENSE`) è
+documentazione, non necessaria a runtime.
+
+1. **Recupera il file** — puoi clonare l'intero repository Utility Forge e usare questa cartella:
    ```bash
-   git clone https://github.com/yourusername/php-image-converter.git
-   cd php-image-converter
+   git clone https://github.com/chiaraberti13/Utility-Forge.git
+   cd Utility-Forge/php-image-converter
    ```
+   oppure scaricare direttamente `php-image-converter.php` dalla cartella
+   [`php-image-converter/`](.) su GitHub.
 
-2. **Carica sul tuo server web**:
-   - Copia `converter.php` nella directory web
-   - Assicurati che PHP abbia i permessi di scrittura sulla directory temp
+2. **Caricalo sul tuo server web** (FTP/SFTP, `scp`, il file manager del tuo hosting — quello che
+   usi di solito):
+   - Copia `php-image-converter.php` in una directory raggiungibile dal web
+   - Assicurati che il processo PHP possa scrivere nella directory temp di sistema — è lì che
+     vengono tenuti upload e file convertiti per un massimo di 1 ora, prima della pulizia
+     automatica
 
-3. **Configura PHP (se necessario)**:
-   Modifica il tuo `php.ini` o usa `.htaccess`:
+3. **Verifica che le estensioni PHP necessarie siano attive** sul server:
+   ```bash
+   php -m | grep -E "gd|fileinfo|zip|imagick"
+   ```
+   `gd`, `fileinfo` e `zip` sono **obbligatorie**; `imagick` è **opzionale** (serve solo per
+   l'output TIFF e per alcune sorgenti HEIC/HEIF che GD da solo non riesce a decodificare).
+
+4. **Alza i limiti di PHP se il tuo hosting li impone più bassi di quanto serva.** Lo script li
+   imposta già a runtime con `ini_set()`, ma un `php.ini` restrittivo può comunque avere la
+   precedenza — in tal caso modifica `php.ini`, un `.user.ini` per directory, oppure `.htaccess`:
    ```ini
    memory_limit = 512M
    max_execution_time = 300
@@ -165,8 +236,14 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
    post_max_size = 100M
    ```
 
-4. **Accedi al convertitore**:
-   Naviga su `http://tuodominio.com/converter.php` nel tuo browser
+5. **Servilo in HTTPS quando possibile.** Il cookie di sessione viene marcato automaticamente
+   `Secure` non appena la richiesta arriva via HTTPS (direttamente, o tramite un reverse proxy che
+   invia `X-Forwarded-Proto: https`) — su HTTP semplice funziona comunque, solo senza questa
+   protezione aggiuntiva.
+
+6. **Aprilo**:
+   Naviga su `https://tuodominio.com/php-image-converter.php` nel browser — nessun setup
+   guidato, nessuna migrazione di database, nessun account da creare.
 
 ### 📖 Utilizzo
 
@@ -209,9 +286,43 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
 
 - **Backend**: PHP puro con GD Library
 - **Opzionale**: ImageMagick per supporto HEIC/HEIF e TIFF complessi
-- **Gestione Sessioni**: File temporanei memorizzati nella directory temp di sistema
-- **Sicurezza**: Limiti dimensione file, validazione estensioni, gestione sicura dei file
+- **Gestione Sessioni**: File temporanei memorizzati nella directory temp di sistema, in una
+  cartella creata con permessi `0700` (leggibile solo dal processo PHP)
 - **Performance**: Uso ottimizzato della memoria, timeout configurabili
+
+### 🔒 Sicurezza
+
+Questo strumento accetta upload di file e riutilizza input dell'utente in header HTTP, percorsi su
+disco e un archivio ZIP — le classiche superfici di injection per un tool PHP di upload. Questa
+versione le rinforza tutte:
+
+- **Protezione CSRF**: ogni richiesta che modifica lo stato (upload, conversione, rinomina,
+  rimozione, cancellazione) deve portare un token per-sessione; le richieste senza token valido
+  vengono rifiutate con `403`.
+- **Validazione sul contenuto reale, non solo sull'estensione**: ogni upload viene verificato con
+  `finfo` confrontando il MIME type reale, così uno script rinominato in `.jpg` viene rifiutato
+  invece di essere elaborato.
+- **Protezione da "decompression bomb"**: le immagini oltre un limite di megapixel configurabile
+  vengono rifiutate al momento dell'upload, e qualsiasi richiesta di ridimensionamento/ritaglio
+  che produrrebbe un'immagine troppo grande viene rifiutata prima di allocare memoria per essa.
+- **Nomi file sicuri**: il nome file originale e il prefisso/suffisso di nomenclatura vengono
+  sanificati prima di essere riusati come nome di download, header HTTP o voce dello ZIP — questo
+  chiude sia l'header injection HTTP sia il path traversal di tipo "zip slip".
+- **Header di download conformi a RFC 6266**: `Content-Disposition` viene costruito con un
+  fallback ASCII sicuro più un nome codificato UTF-8, invece di interpolare direttamente il nome
+  file nella stringa dell'header.
+- **Cookie di sessione rinforzato**: `HttpOnly`, `SameSite=Strict` e `Secure` (quando servito via
+  HTTPS).
+- **Header di sicurezza** su ogni risposta: `Content-Security-Policy`, `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- **Directory di upload per-sessione** creata con permessi `0700`, più un limite al numero di file
+  che una singola sessione può contenere.
+- **Rendering della lista file sicuro contro XSS**: i nomi dei file mostrati nell'interfaccia
+  vengono sanificati prima di essere inseriti nella pagina.
+
+Nulla di questo sostituisce l'eseguire il server dietro HTTPS, mantenere PHP/GD/ImageMagick
+aggiornati e limitare chi può raggiungere questo script — vedi *Requisiti* qui sopra per la base
+di partenza.
 
 ### 🌐 Compatibilità Browser
 
