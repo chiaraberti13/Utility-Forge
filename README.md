@@ -6,6 +6,8 @@
 
 <p align="center">
   <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub stars"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub forks"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Open issues"></a>
   <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="2 tools">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="License"></a>
 </p>
@@ -22,6 +24,24 @@ leaving your browser or your own server.
   <b>If you find these tools useful, consider supporting the project:</b><br><br>
   <a href="https://www.paypal.me/chiaraberti13"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate"></a>
 </p>
+
+---
+
+## Quick Navigation
+
+### [Tools](#tools)
+What's in the collection right now — what each tool does, what it's built with, and where it runs.
+
+### [Licence](#licence)
+MIT, for the whole repository and every tool folder in it.
+
+### [Adding a new tool](#adding-a-new-tool)
+How a new tool gets folded into this monorepo, and what the README needs to reflect it.
+
+> [!TIP]
+> **Have a tool idea?** Open an [issue](https://github.com/chiaraberti13/Utility-Forge/issues) — standalone and privacy-first is the only real requirement.
+
+---
 
 ## What this is
 
