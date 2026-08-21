@@ -1,54 +1,50 @@
 <div align="center">
   <img src="assets/banner.svg" alt="Utility Forge" width="100%">
 
-  <h1>🛠️ Utility Forge</h1>
+  <br><br>
 
-  <p>
-    <b>A collection of standalone, privacy-first utility tools, in one repository.</b><br>
-    <b>Una raccolta di tool di utilità standalone, orientati alla privacy, in un unico repository.</b>
-  </p>
+  <a href="#english">
+    <img src="https://img.shields.io/badge/🇬🇧_ENGLISH-4c1d95?style=for-the-badge&labelColor=1e1b4b" alt="English">
+  </a>
+  &nbsp;&nbsp;
+  <a href="#italiano">
+    <img src="https://img.shields.io/badge/🇮🇹_ITALIANO-047857?style=for-the-badge&labelColor=022c22" alt="Italiano">
+  </a>
 
-  <p>
-    🇬🇧 <a href="#english">English</a> · 🇮🇹 <a href="#italiano">Italiano</a>
-  </p>
+  <br><br>
 
-  <p>
-    <img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=fbbf24" alt="Stars">
-    <img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=3b82f6" alt="Forks">
-    <img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=d97706" alt="Issues">
-    <img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=lightgrey" alt="License: MIT">
-  </p>
-  <p>
-    <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="Tools">
-    <img src="https://img.shields.io/badge/standalone-yes-success?style=for-the-badge" alt="Standalone">
-    <img src="https://img.shields.io/badge/privacy--first-yes-success?style=for-the-badge" alt="Privacy-first">
-    <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational?style=for-the-badge" alt="Maintainer">
-  </p>
+  <img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=fbbf24" alt="Stars">
+  <img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=3b82f6" alt="Forks">
+  <img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=d97706" alt="Issues">
+  <img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=lightgrey" alt="License: MIT">
+  <br>
+  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="Tools">
+  <img src="https://img.shields.io/badge/standalone-yes-success?style=for-the-badge" alt="Standalone">
+  <img src="https://img.shields.io/badge/privacy--first-yes-success?style=for-the-badge" alt="Privacy-first">
+  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational?style=for-the-badge" alt="Maintainer">
 
-  <p>
-    <b>💛 If you find these tools useful, consider supporting the project</b><br>
-    <b>💛 Se questi tool ti sono utili, considera di supportare il progetto</b>
-  </p>
-  <p>
-    <a href="https://www.paypal.me/chiaraberti13">
-      <img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate">
-    </a>
-    <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers">
-      <img src="https://img.shields.io/badge/⭐-Star_this_repo-fbbf24?style=for-the-badge" alt="Star this repo">
-    </a>
-  </p>
+  <br><br>
+
+  <a href="https://www.paypal.me/chiaraberti13">
+    <img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate">
+  </a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers">
+    <img src="https://img.shields.io/badge/⭐-Star_this_repo-fbbf24?style=for-the-badge" alt="Star this repo">
+  </a>
 </div>
 
----
-
-## 📑 Quick Navigation
-
-**English:** [What this is](#what-this-is) · [Tools](#tools) · [Licence](#licence) · [Adding a new tool](#adding-a-new-tool)
-**Italiano:** [Cos'è](#cosè) · [Tool disponibili](#tool-disponibili) · [Licenza](#licenza) · [Aggiungere un nuovo tool](#aggiungere-un-nuovo-tool)
+<br>
 
 ---
 
-## English
+<a name="english"></a>
+## 🇬🇧 English
+
+<h1>🛠️ Utility Forge</h1>
+
+**A collection of standalone, privacy-first utility tools, in one repository.**
+
+**[📑 Jump to:](#tools)** [What this is](#what-this-is) · [Tools](#tools) · [Licence](#licence) · [Adding a new tool](#adding-a-new-tool) — or switch to [🇮🇹 Italiano](#italiano)
 
 ### What this is
 
@@ -102,9 +98,27 @@ number *n+1* means:
    link to the folder.
 4. Bump the `tools-N` badge at the top of this file to the new count.
 
+### Support this project
+
+If these tools saved you some time, a ⭐ on the repo costs nothing, and a coffee is
+always appreciated:
+
+<a href="https://www.paypal.me/chiaraberti13">
+  <img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate">
+</a>
+
+<br><br>
+
 ---
 
-## Italiano
+<a name="italiano"></a>
+## 🇮🇹 Italiano
+
+<h1>🛠️ Utility Forge</h1>
+
+**Una raccolta di tool di utilità standalone, orientati alla privacy, in un unico repository.**
+
+**[📑 Vai a:](#tool-disponibili)** [Cos'è](#cosè) · [Tool disponibili](#tool-disponibili) · [Licenza](#licenza) · [Aggiungere un nuovo tool](#aggiungere-un-nuovo-tool) — oppure passa a [🇬🇧 English](#english)
 
 ### Cos'è
 
@@ -159,17 +173,19 @@ mai pubblicati separatamente. In pratica, aggiungere il tool numero *n+1* signif
    dove funziona, link alla cartella.
 4. Aggiornare il badge `tools-N` in cima a questo file con il nuovo conteggio.
 
----
+### Sostieni il progetto
 
-<div align="center">
-
-### ⭐☕ Made by chiaraberti13 ☕⭐
-
-**If this project saved you time, a star on the repo or a small donation goes a long way.**
-**Se questo progetto ti ha fatto risparmiare tempo, una stella al repo o una piccola donazione fanno la differenza.**
+Se questi tool ti hanno fatto risparmiare tempo, una ⭐ al repo non costa nulla, e un
+caffè è sempre gradito:
 
 <a href="https://www.paypal.me/chiaraberti13">
   <img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate">
 </a>
 
+<br><br>
+
+---
+
+<div align="center">
+  <sub>Made with 🛠️ by <a href="https://github.com/chiaraberti13">chiaraberti13</a></sub>
 </div>
