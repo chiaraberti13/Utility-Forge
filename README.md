@@ -1,29 +1,50 @@
-<p align="center">
+<div align="center">
   <img src="assets/banner.svg" alt="Utility Forge" width="100%">
-</p>
 
-<h1 align="center">🛠️ Utility Forge</h1>
+  <h1>🛠️ Utility Forge</h1>
 
-<p align="center">
-  <b>A collection of standalone, privacy-first utility tools, in one repository.</b><br>
-  <b>Una raccolta di tool di utilità standalone, orientati alla privacy, in un unico repository.</b>
-</p>
+  <p>
+    <b>A collection of standalone, privacy-first utility tools, in one repository.</b><br>
+    <b>Una raccolta di tool di utilità standalone, orientati alla privacy, in un unico repository.</b>
+  </p>
 
-<p align="center">
-  🇬🇧 <a href="#english">English</a> · 🇮🇹 <a href="#italiano">Italiano</a>
-</p>
+  <p>
+    🇬🇧 <a href="#english">English</a> · 🇮🇹 <a href="#italiano">Italiano</a>
+  </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="Tools">
-  <img src="https://img.shields.io/badge/license-MIT-lightgrey?style=for-the-badge" alt="License: MIT">
-  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational?style=for-the-badge" alt="Maintainer">
-</p>
+  <p>
+    <img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=fbbf24" alt="Stars">
+    <img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=3b82f6" alt="Forks">
+    <img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=d97706" alt="Issues">
+    <img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=lightgrey" alt="License: MIT">
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="Tools">
+    <img src="https://img.shields.io/badge/standalone-yes-success?style=for-the-badge" alt="Standalone">
+    <img src="https://img.shields.io/badge/privacy--first-yes-success?style=for-the-badge" alt="Privacy-first">
+    <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational?style=for-the-badge" alt="Maintainer">
+  </p>
 
-<p align="center">
-  <b>If you find these tools useful, consider supporting the project:</b><br>
-  <b>Se questi tool ti sono utili, considera di supportare il progetto:</b><br><br>
-  <a href="https://www.paypal.me/chiaraberti13"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate"></a>
-</p>
+  <p>
+    <b>💛 If you find these tools useful, consider supporting the project</b><br>
+    <b>💛 Se questi tool ti sono utili, considera di supportare il progetto</b>
+  </p>
+  <p>
+    <a href="https://www.paypal.me/chiaraberti13">
+      <img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate">
+    </a>
+    <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers">
+      <img src="https://img.shields.io/badge/⭐-Star_this_repo-fbbf24?style=for-the-badge" alt="Star this repo">
+    </a>
+  </p>
+</div>
+
+---
+
+## 📑 Quick Navigation
+
+**English:** [What this is](#what-this-is) · [Tools](#tools) · [Licence](#licence) · [Adding a new tool](#adding-a-new-tool)
+**Italiano:** [Cos'è](#cosè) · [Tool disponibili](#tool-disponibili) · [Licenza](#licenza) · [Aggiungere un nuovo tool](#aggiungere-un-nuovo-tool)
 
 ---
 
@@ -37,18 +58,19 @@ repository. No hunting across separate repos to find a tool: clone this one and 
 everything.
 
 The tools share a philosophy, not a stack:
-- **Standalone** — no server-side account, no SaaS signup; usually a single file you
+
+- ✅ **Standalone** — no server-side account, no SaaS signup; usually a single file you
   can just open or drop onto a server.
-- **Privacy-first** — data is processed locally (in the browser) or on your own
+- ✅ **Privacy-first** — data is processed locally (in the browser) or on your own
   server; nothing is sent to a third party.
-- **Free and open-source**, under the MIT licence.
+- ✅ **Free and open-source**, under the MIT licence.
 
 ### Tools
 
-| Tool | What it does | Stack | Folder |
-|---|---|---|---|
-| 📦 **EPS Barcode Generator** | Generates EAN-13 barcodes in vector EPS format straight from an Excel/CSV list — bulk, with ZIP download. Runs entirely in the browser, no install. | Single-file HTML/JS | [`barcode-eps-wizard/`](barcode-eps-wizard) |
-| 🖼️ **PHP Image Converter** | Converts images between JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, with resize, crop presets and batch ZIP export, via a web UI. Runs entirely on your own server. | Single-file PHP + GD/ImageMagick | [`php-image-converter/`](php-image-converter) |
+| Tool | What it does | Stack | Runs on | Folder |
+|---|---|---|---|---|
+| 📦 **EPS Barcode Generator** | Generates EAN-13 barcodes in vector EPS format straight from an Excel/CSV list — bulk, with ZIP download. | Single-file HTML/JS | 🌐 Browser only | [`barcode-eps-wizard/`](barcode-eps-wizard) |
+| 🖼️ **PHP Image Converter** | Converts images between JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, with resize, crop presets and batch ZIP export, via a web UI. | Single-file PHP + GD/ImageMagick | 🖥️ Your own server | [`php-image-converter/`](php-image-converter) |
 
 Each folder is self-contained: open `barcode-eps-wizard/barcode-eps-wizard.html` directly
 in a browser, or drop `php-image-converter/php-image-converter.php` on a PHP server —
@@ -76,8 +98,8 @@ number *n+1* means:
 1. Create a new folder at the repository root, named after the tool.
 2. Put the tool's files in it, including its own `README.md` with setup/usage
    instructions.
-3. Add one row to the table above: name, one-line description, stack, link to the
-   folder.
+3. Add one row to the table above: name, one-line description, stack, where it runs,
+   link to the folder.
 4. Bump the `tools-N` badge at the top of this file to the new count.
 
 ---
@@ -92,18 +114,19 @@ sta qui, in questo repository. Niente più repo sparsi da cercare: si clona ques
 tutto.
 
 I tool condividono una filosofia, non uno stack:
-- **Standalone** — nessun account lato server, nessuna registrazione SaaS; di solito
+
+- ✅ **Standalone** — nessun account lato server, nessuna registrazione SaaS; di solito
   un singolo file da aprire o caricare su un server.
-- **Privacy-first** — i dati vengono elaborati in locale (nel browser) o sul proprio
+- ✅ **Privacy-first** — i dati vengono elaborati in locale (nel browser) o sul proprio
   server; nulla viene inviato a terzi.
-- **Gratuiti e open-source**, con licenza MIT.
+- ✅ **Gratuiti e open-source**, con licenza MIT.
 
 ### Tool disponibili
 
-| Tool | Cosa fa | Stack | Cartella |
-|---|---|---|---|
-| 📦 **EPS Barcode Generator** | Genera barcode EAN-13 in formato vettoriale EPS direttamente da un elenco Excel/CSV — in massa, con download ZIP. Funziona interamente nel browser, senza installazione. | HTML/JS a file singolo | [`barcode-eps-wizard/`](barcode-eps-wizard) |
-| 🖼️ **PHP Image Converter** | Converte immagini tra JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, con ridimensionamento, ritagli predefiniti ed export ZIP in batch, tramite interfaccia web. Funziona interamente sul proprio server. | PHP a file singolo + GD/ImageMagick | [`php-image-converter/`](php-image-converter) |
+| Tool | Cosa fa | Stack | Funziona su | Cartella |
+|---|---|---|---|---|
+| 📦 **EPS Barcode Generator** | Genera barcode EAN-13 in formato vettoriale EPS direttamente da un elenco Excel/CSV — in massa, con download ZIP. | HTML/JS a file singolo | 🌐 Solo browser | [`barcode-eps-wizard/`](barcode-eps-wizard) |
+| 🖼️ **PHP Image Converter** | Converte immagini tra JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, con ridimensionamento, ritagli predefiniti ed export ZIP in batch, tramite interfaccia web. | PHP a file singolo + GD/ImageMagick | 🖥️ Un tuo server | [`php-image-converter/`](php-image-converter) |
 
 Ogni cartella è autonoma: si può aprire direttamente
 `barcode-eps-wizard/barcode-eps-wizard.html` nel browser, oppure caricare
@@ -133,5 +156,20 @@ mai pubblicati separatamente. In pratica, aggiungere il tool numero *n+1* signif
 2. Inserirci i file del tool, incluso il proprio `README.md` con le istruzioni di
    installazione e uso.
 3. Aggiungere una riga alla tabella qui sopra: nome, descrizione in una riga, stack,
-   link alla cartella.
+   dove funziona, link alla cartella.
 4. Aggiornare il badge `tools-N` in cima a questo file con il nuovo conteggio.
+
+---
+
+<div align="center">
+
+### ⭐☕ Made by chiaraberti13 ☕⭐
+
+**If this project saved you time, a star on the repo or a small donation goes a long way.**
+**Se questo progetto ti ha fatto risparmiare tempo, una stella al repo o una piccola donazione fanno la differenza.**
+
+<a href="https://www.paypal.me/chiaraberti13">
+  <img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate">
+</a>
+
+</div>
