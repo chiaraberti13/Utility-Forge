@@ -2,14 +2,19 @@
 
 > 🇬🇧 **English** | 🇮🇹 [Italiano](#-generatore-barcode-eps-italiano)
 
-Standalone web app to generate EAN-13 barcodes in EPS format from Excel. No installation, works offline, bulk ZIP download. Perfect for Adobe Illustrator workflows.
+A single self-contained HTML page that turns an Excel/CSV list of article codes and barcodes into
+ready-to-print **EAN-13 barcodes in vector EPS format** — in bulk, with a one-click ZIP download.
+Everything runs client-side, in your own browser: no upload, no server, no account, and the input
+spreadsheet never leaves your machine. Designed for graphic/prepress workflows (Adobe Illustrator,
+CorelDRAW, Inkscape) where you need dozens or hundreds of print-ready barcode files at once instead
+of generating them one by one.
 
 ---
 
 ## 🎯 COMPLETE PACKAGE
 
 This package contains:
-- **`barcode-eps-wizard.html`** - The complete web application
+- **`barcode-eps-wizard.html`** - The complete web application (this is the only file you need to run it)
 - **`example.xlsx`** - Sample Excel file with correct structure
 - **`LICENSE`** - MIT License
 - **`README.md`** - This documentation (English + Italian)
@@ -23,6 +28,16 @@ This is a **completely standalone** web app. You don't need to install:
 - ❌ Libraries or dependencies
 - ❌ Additional software
 
+Two ways to use it, both work equally well:
+
+- **Locally, on your own computer** — just double-click `barcode-eps-wizard.html`; it opens in
+  your default browser and everything (Excel parsing, EPS generation, ZIP packaging) happens
+  entirely in that browser tab.
+- **Shared on a team/intranet server** — since it's a single static HTML file, you can also drop
+  it on any plain web server (or an internal file share, or a static host like GitHub Pages) so
+  colleagues can reach it at a URL instead of each needing their own copy. No backend, no build
+  step, no server-side language required.
+
 **Just open the HTML file in your browser!**
 
 ---
@@ -30,11 +45,19 @@ This is a **completely standalone** web app. You don't need to install:
 ## 🚀 HOW TO USE IN 3 STEPS
 
 ### Step 1: Open the application
-1. **Double-click** on `barcode-eps-wizard.html`
+1. **Double-click** on `barcode-eps-wizard.html` (or open its URL, if hosted on a server)
 2. It will automatically open in your default browser
-3. Works with: Chrome, Firefox, Safari, Edge
+3. Works with: Chrome, Firefox, Safari, Edge (any modern, up-to-date browser)
 
-💡 **Note:** Internet connection required only for first load (to download icons). After first launch, the app can work offline.
+💡 **Note:** the page loads three small libraries (Excel parsing, ZIP creation, icons) from a CDN
+over the internet each time you open it, so you do need a connection to load the page itself. The
+processing that happens *after* it has loaded — reading your Excel file and generating the EPS
+barcodes — never sends anything back over the network.
+
+✅ **How to tell it loaded correctly:** if you see the barcode icon and the upload area with its
+icon in the top-left, the libraries loaded fine. If the layout looks unstyled or icons are
+missing, check your connection and reload — see the "Troubleshooting" section further down if it
+persists.
 
 ### Step 2: Prepare your Excel file
 Use `example.xlsx` as an example. The structure must be:
@@ -301,14 +324,19 @@ By Chiara Berti - 2026
 
 > 🇬🇧 [English](#-eps-barcode-generator) | 🇮🇹 **Italiano**
 
-Applicazione web standalone per generare barcode EAN-13 in formato EPS da Excel. Nessuna installazione, funziona offline, download ZIP massivo. Perfetto per flussi di lavoro Adobe Illustrator.
+Una singola pagina HTML autonoma che trasforma un elenco Excel/CSV di codici articolo e barcode in
+**barcode EAN-13 pronti per la stampa in formato vettoriale EPS** — in massa, con download ZIP in
+un click. Tutto gira lato client, nel tuo browser: nessun upload, nessun server, nessun account, e
+il file Excel di partenza non lascia mai il tuo computer. Pensato per i flussi di lavoro
+grafici/prestampa (Adobe Illustrator, CorelDRAW, Inkscape) dove servono decine o centinaia di file
+barcode pronti per la stampa tutti insieme, invece di generarli uno alla volta.
 
 ---
 
 ## 🎯 PACCHETTO COMPLETO
 
 Questo pacchetto contiene:
-- **`barcode-eps-wizard.html`** - L'applicazione web completa
+- **`barcode-eps-wizard.html`** - L'applicazione web completa (è l'unico file che ti serve per usarla)
 - **`example.xlsx`** - File Excel di esempio con la struttura corretta
 - **`LICENSE`** - Licenza MIT
 - **`README.md`** - Questa documentazione (Inglese + Italiano)
@@ -322,6 +350,16 @@ Questa è una web app **completamente standalone**. Non devi installare:
 - ❌ Librerie o dipendenze
 - ❌ Software aggiuntivo
 
+Due modi per usarla, entrambi validi:
+
+- **In locale, sul tuo computer** — basta fare doppio click su `barcode-eps-wizard.html`; si apre
+  nel browser predefinito e tutto (lettura dell'Excel, generazione EPS, creazione dello ZIP)
+  avviene interamente in quella scheda del browser.
+- **Condivisa su un server di team/intranet** — essendo un singolo file HTML statico, puoi anche
+  metterla su un qualunque server web (o una condivisione file interna, o un hosting statico come
+  GitHub Pages), così i colleghi la raggiungono con un URL invece di dover avere ciascuno la
+  propria copia. Nessun backend, nessuna build, nessun linguaggio lato server richiesto.
+
 **Basta aprire il file HTML nel browser!**
 
 ---
@@ -329,11 +367,19 @@ Questa è una web app **completamente standalone**. Non devi installare:
 ## 🚀 COME USARE IN 3 PASSI
 
 ### Passo 1: Aprire l'applicazione
-1. Fai **doppio click** sul file `barcode-eps-wizard.html`
+1. Fai **doppio click** sul file `barcode-eps-wizard.html` (oppure apri l'URL, se ospitata su un server)
 2. Si aprirà automaticamente nel tuo browser predefinito
-3. Funziona con: Chrome, Firefox, Safari, Edge
+3. Funziona con: Chrome, Firefox, Safari, Edge (qualsiasi browser moderno e aggiornato)
 
-💡 **Nota:** Serve connessione internet solo per il primo caricamento (per scaricare le icone). Dopo il primo avvio, l'app può funzionare offline.
+💡 **Nota:** la pagina carica tre piccole librerie (lettura Excel, creazione ZIP, icone) da un CDN
+via internet ogni volta che la apri, quindi serve una connessione per caricare la pagina stessa.
+L'elaborazione che avviene *dopo* il caricamento — leggere il tuo file Excel e generare i barcode
+EPS — non invia mai nulla in rete.
+
+✅ **Come capire se si è caricata correttamente:** se vedi l'icona del barcode e l'area di
+caricamento con la sua icona in alto a sinistra, le librerie si sono caricate bene. Se il layout
+sembra senza stile o mancano le icone, controlla la connessione e ricarica — vedi la sezione
+"Risoluzione problemi" più sotto se persiste.
 
 ### Passo 2: Preparare il file Excel
 Usa il file `example.xlsx` come esempio. La struttura deve essere:

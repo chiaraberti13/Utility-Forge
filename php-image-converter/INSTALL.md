@@ -8,9 +8,9 @@
 
 The simplest way to get started:
 
-1. Download `converter.php`
+1. Download `php-image-converter.php`
 2. Upload to your web server
-3. Access via browser: `http://yourdomain.com/converter.php`
+3. Access via browser: `http://yourdomain.com/php-image-converter.php`
 
 That's it! 🎉
 
@@ -49,7 +49,7 @@ Upload it to your server and access it via browser. Check for:
 ##### Option 1: Direct Upload
 
 1. **Download the file**:
-   - Download `converter.php` from the repository
+   - Download `php-image-converter.php` from the repository
 
 2. **Upload to server**:
    - Use FTP/SFTP client (FileZilla, Cyberduck, etc.)
@@ -57,29 +57,29 @@ Upload it to your server and access it via browser. Check for:
 
 3. **Set permissions** (Linux/Unix servers):
    ```bash
-   chmod 644 converter.php
+   chmod 644 php-image-converter.php
    ```
 
 4. **Access the converter**:
    - Open browser
-   - Navigate to: `http://yourdomain.com/converter.php`
+   - Navigate to: `http://yourdomain.com/php-image-converter.php`
 
 ##### Option 2: Git Clone (for developers)
 
-1. **Clone the repository**:
+1. **Clone the Utility Forge repository** (this tool lives in it as a self-contained folder):
    ```bash
-   git clone https://github.com/yourusername/php-image-converter.git
-   cd php-image-converter
+   git clone https://github.com/chiaraberti13/Utility-Forge.git
+   cd Utility-Forge/php-image-converter
    ```
 
 2. **Copy to web directory**:
    ```bash
-   cp converter.php /path/to/your/webroot/
+   cp php-image-converter.php /path/to/your/webroot/
    ```
 
 3. **Access the converter**:
    ```
-   http://yourdomain.com/converter.php
+   http://yourdomain.com/php-image-converter.php
    ```
 
 ---
@@ -116,7 +116,7 @@ extension=imagick  ; Optional but recommended
 
 **Option B: Use .htaccess (Apache only)**
 
-Create/edit `.htaccess` in the same directory as `converter.php`:
+Create/edit `.htaccess` in the same directory as `php-image-converter.php`:
 
 ```apache
 php_value memory_limit 512M
@@ -127,7 +127,7 @@ php_value post_max_size 100M
 
 **Option C: Use .user.ini (some shared hosts)**
 
-Create `.user.ini` in the same directory as `converter.php`:
+Create `.user.ini` in the same directory as `php-image-converter.php`:
 
 ```ini
 memory_limit = 512M
@@ -230,12 +230,27 @@ brew services restart php
 
 ### Security Considerations
 
-1. **File Upload Directory**: The converter uses system temp directory with unique session-based subdirectories
-2. **File Validation**: Only accepted image formats are processed
-3. **Session Security**: Files are isolated per session
-4. **Cleanup**: Temporary files can be cleaned manually or with cron jobs
+The script includes several protections out of the box — see the "🔒 Security" section of
+[`README.md`](README.md) for the full list. In short:
 
-Optional: Add automatic cleanup with cron:
+1. **Upload directory**: system temp directory, in a unique per-session subfolder created with
+   `0700` permissions (readable/writable only by the PHP process)
+2. **Real content validation**: uploads are checked with `finfo` against their actual MIME type,
+   not just the file extension, and oversized images (decompression-bomb risk) are rejected
+3. **CSRF protection**: every state-changing request (upload, convert, remove, rename, clear)
+   requires a per-session token
+4. **Safe filenames and headers**: filenames are sanitized before being used in an HTTP header,
+   on disk or inside the ZIP archive; downloads use a proper RFC 6266 `Content-Disposition`
+5. **Hardened session cookie**: `HttpOnly`, `SameSite=Strict`, and `Secure` when served over HTTPS
+6. **Security response headers**: `Content-Security-Policy`, `X-Content-Type-Options`,
+   `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` on every response
+7. **Cleanup**: converted files are deleted automatically after 1 hour; you can still add a cron
+   job for extra peace of mind
+
+What this script does **not** do for you: serve itself over HTTPS, keep PHP/GD/ImageMagick
+patched, or restrict *who* can reach the URL — that's still on you as the person deploying it.
+
+Optional: add automatic cleanup with cron anyway, as a second line of defense:
 ```bash
 # Clean old temp files daily (Linux)
 0 2 * * * find /tmp -name "image_converter_*" -mtime +1 -exec rm -rf {} \;
@@ -261,9 +276,9 @@ If all steps work, your installation is successful! ✅
 
 Il modo più semplice per iniziare:
 
-1. Scarica `converter.php`
+1. Scarica `php-image-converter.php`
 2. Carica sul tuo server web
-3. Accedi via browser: `http://tuodominio.com/converter.php`
+3. Accedi via browser: `http://tuodominio.com/php-image-converter.php`
 
 È tutto! 🎉
 
@@ -302,7 +317,7 @@ Caricalo sul server e accedi via browser. Controlla:
 ##### Opzione 1: Upload Diretto
 
 1. **Scarica il file**:
-   - Scarica `converter.php` dal repository
+   - Scarica `php-image-converter.php` dal repository
 
 2. **Carica sul server**:
    - Usa client FTP/SFTP (FileZilla, Cyberduck, ecc.)
@@ -310,29 +325,30 @@ Caricalo sul server e accedi via browser. Controlla:
 
 3. **Imposta permessi** (server Linux/Unix):
    ```bash
-   chmod 644 converter.php
+   chmod 644 php-image-converter.php
    ```
 
 4. **Accedi al convertitore**:
    - Apri browser
-   - Naviga su: `http://tuodominio.com/converter.php`
+   - Naviga su: `http://tuodominio.com/php-image-converter.php`
 
 ##### Opzione 2: Git Clone (per sviluppatori)
 
-1. **Clona il repository**:
+1. **Clona il repository Utility Forge** (questo tool vive al suo interno come cartella
+   autonoma):
    ```bash
-   git clone https://github.com/yourusername/php-image-converter.git
-   cd php-image-converter
+   git clone https://github.com/chiaraberti13/Utility-Forge.git
+   cd Utility-Forge/php-image-converter
    ```
 
 2. **Copia nella directory web**:
    ```bash
-   cp converter.php /percorso/del/tuo/webroot/
+   cp php-image-converter.php /percorso/del/tuo/webroot/
    ```
 
 3. **Accedi al convertitore**:
    ```
-   http://tuodominio.com/converter.php
+   http://tuodominio.com/php-image-converter.php
    ```
 
 ---
@@ -369,7 +385,7 @@ extension=imagick  ; Opzionale ma consigliato
 
 **Opzione B: Usa .htaccess (solo Apache)**
 
-Crea/modifica `.htaccess` nella stessa directory di `converter.php`:
+Crea/modifica `.htaccess` nella stessa directory di `php-image-converter.php`:
 
 ```apache
 php_value memory_limit 512M
@@ -380,7 +396,7 @@ php_value post_max_size 100M
 
 **Opzione C: Usa .user.ini (alcuni hosting condivisi)**
 
-Crea `.user.ini` nella stessa directory di `converter.php`:
+Crea `.user.ini` nella stessa directory di `php-image-converter.php`:
 
 ```ini
 memory_limit = 512M
@@ -483,12 +499,30 @@ brew services restart php
 
 ### Considerazioni Sicurezza
 
-1. **Directory Upload File**: Il convertitore usa directory temp di sistema con sottodirectory uniche basate su sessione
-2. **Validazione File**: Solo formati immagine accettati vengono elaborati
-3. **Sicurezza Sessione**: I file sono isolati per sessione
-4. **Pulizia**: I file temporanei possono essere puliti manualmente o con cron job
+Lo script include diverse protezioni già attive — vedi la sezione "🔒 Sicurezza" del
+[`README.md`](README.md) per l'elenco completo. In breve:
 
-Opzionale: Aggiungi pulizia automatica con cron:
+1. **Directory di upload**: directory temp di sistema, in una sottocartella per-sessione unica
+   creata con permessi `0700` (leggibile/scrivibile solo dal processo PHP)
+2. **Validazione sul contenuto reale**: gli upload vengono verificati con `finfo` in base al MIME
+   type reale, non solo all'estensione, e le immagini troppo grandi (rischio "decompression
+   bomb") vengono rifiutate
+3. **Protezione CSRF**: ogni richiesta che modifica lo stato (upload, conversione, rimozione,
+   rinomina, cancellazione) richiede un token per-sessione
+4. **Nomi file e header sicuri**: i nomi file vengono sanificati prima di essere usati in un
+   header HTTP, su disco o dentro lo ZIP; i download usano un `Content-Disposition` conforme a
+   RFC 6266
+5. **Cookie di sessione rinforzato**: `HttpOnly`, `SameSite=Strict` e `Secure` quando servito via
+   HTTPS
+6. **Header di sicurezza in risposta**: `Content-Security-Policy`, `X-Content-Type-Options`,
+   `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` su ogni risposta
+7. **Pulizia**: i file convertiti vengono eliminati automaticamente dopo 1 ora; puoi comunque
+   aggiungere un cron job per maggiore tranquillità
+
+Quello che questo script **non** fa al posto tuo: servirsi in HTTPS, mantenere PHP/GD/ImageMagick
+aggiornati, o limitare *chi* può raggiungere l'URL — resta responsabilità di chi lo mette online.
+
+Opzionale: aggiungi comunque una pulizia automatica con cron, come ulteriore livello di difesa:
 ```bash
 # Pulisci vecchi file temp giornalmente (Linux)
 0 2 * * * find /tmp -name "image_converter_*" -mtime +1 -exec rm -rf {} \;

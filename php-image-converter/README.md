@@ -8,7 +8,7 @@
 
 ## 🇬🇧 English
 
-A powerful, self-contained PHP image converter with an intuitive web interface. Convert images between multiple formats with advanced options like resizing, cropping, and quality control—all in a single PHP file.
+A powerful, self-contained PHP image converter with an intuitive web interface. Convert images between multiple formats with advanced options like resizing, cropping, and quality control — all in a single, hardened PHP file you drop straight onto your own server, with no database and no external service involved.
 
 ### ✨ Key Features
 
@@ -35,18 +35,34 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
 
 ### 🚀 Installation
 
-1. **Download the converter**:
+This tool is a **single, self-contained PHP file**: `php-image-converter.php`. That one file is
+all you need on the server — everything else in this folder (`README.md`, `INSTALL.md`,
+`LICENSE`) is documentation, not required at runtime.
+
+1. **Get the file** — either clone the whole Utility Forge repository and use this folder:
    ```bash
-   git clone https://github.com/yourusername/php-image-converter.git
-   cd php-image-converter
+   git clone https://github.com/chiaraberti13/Utility-Forge.git
+   cd Utility-Forge/php-image-converter
    ```
+   or just download `php-image-converter.php` on its own from the
+   [`php-image-converter/`](.) folder on GitHub.
 
-2. **Upload to your web server**:
-   - Copy `converter.php` to your web directory
-   - Ensure PHP has write permissions for the temp directory
+2. **Upload it to your web server** (FTP/SFTP, `scp`, your host's file manager — whatever you
+   normally use):
+   - Copy `php-image-converter.php` into a web-accessible directory
+   - Make sure the PHP process can write to the system temp directory — it's where uploads and
+     converted files are kept for up to 1 hour before automatic cleanup
 
-3. **Configure PHP (if needed)**:
-   Edit your `php.ini` or use `.htaccess`:
+3. **Check the required PHP extensions are enabled** on the server:
+   ```bash
+   php -m | grep -E "gd|fileinfo|zip|imagick"
+   ```
+   `gd`, `fileinfo` and `zip` are **required**; `imagick` is **optional** (only needed for TIFF
+   output and for some HEIC/HEIF sources GD alone can't decode).
+
+4. **Raise PHP's limits if your host caps them lower than this script needs.** The script already
+   sets these at runtime via `ini_set()`, but a restrictive `php.ini` can still override it — if
+   so, adjust `php.ini`, a per-directory `.user.ini`, or `.htaccess`:
    ```ini
    memory_limit = 512M
    max_execution_time = 300
@@ -54,8 +70,14 @@ A powerful, self-contained PHP image converter with an intuitive web interface. 
    post_max_size = 100M
    ```
 
-4. **Access the converter**:
-   Navigate to `http://yourdomain.com/converter.php` in your browser
+5. **Serve it over HTTPS if at all possible.** The session cookie is automatically marked
+   `Secure` the moment the request arrives over HTTPS (directly, or via a reverse proxy sending
+   `X-Forwarded-Proto: https`) — over plain HTTP it still works, just without that extra
+   protection.
+
+6. **Open it**:
+   Navigate to `https://yourdomain.com/php-image-converter.php` in your browser — no setup
+   wizard, no database migration, no account to create.
 
 ### 📖 Usage
 
@@ -151,7 +173,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🇮🇹 Italiano
 
-Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti immagini tra diversi formati con opzioni avanzate come ridimensionamento, ritaglio e controllo della qualità—tutto in un singolo file PHP.
+Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti immagini tra diversi formati con opzioni avanzate come ridimensionamento, ritaglio e controllo della qualità — tutto in un singolo file PHP messo in sicurezza, da caricare direttamente sul tuo server, senza database e senza alcun servizio esterno.
 
 ### ✨ Caratteristiche Principali
 
@@ -178,18 +200,35 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
 
 ### 🚀 Installazione
 
-1. **Scarica il convertitore**:
+Questo tool è un **singolo file PHP autonomo**: `php-image-converter.php`. Sul server serve solo
+quel file — tutto il resto in questa cartella (`README.md`, `INSTALL.md`, `LICENSE`) è
+documentazione, non necessaria a runtime.
+
+1. **Recupera il file** — puoi clonare l'intero repository Utility Forge e usare questa cartella:
    ```bash
-   git clone https://github.com/yourusername/php-image-converter.git
-   cd php-image-converter
+   git clone https://github.com/chiaraberti13/Utility-Forge.git
+   cd Utility-Forge/php-image-converter
    ```
+   oppure scaricare direttamente `php-image-converter.php` dalla cartella
+   [`php-image-converter/`](.) su GitHub.
 
-2. **Carica sul tuo server web**:
-   - Copia `converter.php` nella directory web
-   - Assicurati che PHP abbia i permessi di scrittura sulla directory temp
+2. **Caricalo sul tuo server web** (FTP/SFTP, `scp`, il file manager del tuo hosting — quello che
+   usi di solito):
+   - Copia `php-image-converter.php` in una directory raggiungibile dal web
+   - Assicurati che il processo PHP possa scrivere nella directory temp di sistema — è lì che
+     vengono tenuti upload e file convertiti per un massimo di 1 ora, prima della pulizia
+     automatica
 
-3. **Configura PHP (se necessario)**:
-   Modifica il tuo `php.ini` o usa `.htaccess`:
+3. **Verifica che le estensioni PHP necessarie siano attive** sul server:
+   ```bash
+   php -m | grep -E "gd|fileinfo|zip|imagick"
+   ```
+   `gd`, `fileinfo` e `zip` sono **obbligatorie**; `imagick` è **opzionale** (serve solo per
+   l'output TIFF e per alcune sorgenti HEIC/HEIF che GD da solo non riesce a decodificare).
+
+4. **Alza i limiti di PHP se il tuo hosting li impone più bassi di quanto serva.** Lo script li
+   imposta già a runtime con `ini_set()`, ma un `php.ini` restrittivo può comunque avere la
+   precedenza — in tal caso modifica `php.ini`, un `.user.ini` per directory, oppure `.htaccess`:
    ```ini
    memory_limit = 512M
    max_execution_time = 300
@@ -197,8 +236,14 @@ Un potente convertitore di immagini PHP con interfaccia web intuitiva. Converti 
    post_max_size = 100M
    ```
 
-4. **Accedi al convertitore**:
-   Naviga su `http://tuodominio.com/converter.php` nel tuo browser
+5. **Servilo in HTTPS quando possibile.** Il cookie di sessione viene marcato automaticamente
+   `Secure` non appena la richiesta arriva via HTTPS (direttamente, o tramite un reverse proxy che
+   invia `X-Forwarded-Proto: https`) — su HTTP semplice funziona comunque, solo senza questa
+   protezione aggiuntiva.
+
+6. **Aprilo**:
+   Naviga su `https://tuodominio.com/php-image-converter.php` nel browser — nessun setup
+   guidato, nessuna migrazione di database, nessun account da creare.
 
 ### 📖 Utilizzo
 

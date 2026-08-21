@@ -1,7 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/tools-2-blue" alt="Tools">
-  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="License: MIT">
-  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational" alt="Maintainer">
+  <img src="assets/banner.svg" alt="Utility Forge" width="100%">
 </p>
 
 <h1 align="center">🛠️ Utility Forge</h1>
@@ -13,6 +11,12 @@
 
 <p align="center">
   🇬🇧 <a href="#english">English</a> · 🇮🇹 <a href="#italiano">Italiano</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/tools-2-blue" alt="Tools">
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="License: MIT">
+  <img src="https://img.shields.io/badge/maintainer-chiaraberti13-informational" alt="Maintainer">
 </p>
 
 ---
