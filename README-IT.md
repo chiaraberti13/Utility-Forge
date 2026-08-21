@@ -6,6 +6,8 @@
 
 <p align="center">
   <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="Stelle GitHub"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="Fork GitHub"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Issue aperte"></a>
   <img src="https://img.shields.io/badge/tool-2-blue?style=for-the-badge" alt="2 tool">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="Licenza"></a>
 </p>
@@ -22,6 +24,24 @@ registrazione SaaS, senza che i dati escano dal tuo browser o dal tuo server.
   <b>Se questi tool ti sono utili, considera di supportare il progetto:</b><br><br>
   <a href="https://www.paypal.me/chiaraberti13"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Dona con PayPal"></a>
 </p>
+
+---
+
+## Indice rapido
+
+### [Tool disponibili](#tool-disponibili)
+Cosa c'è nella raccolta al momento — cosa fa ogni tool, con cosa è costruito e dove funziona.
+
+### [Licenza](#licenza)
+MIT, per l'intero repository e ogni cartella tool al suo interno.
+
+### [Aggiungere un nuovo tool](#aggiungere-un-nuovo-tool)
+Come un nuovo tool entra a far parte di questo monorepo e cosa deve riflettere il README.
+
+> [!TIP]
+> **Hai un'idea per un tool?** Apri una [issue](https://github.com/chiaraberti13/Utility-Forge/issues) — l'unico vero requisito è che sia standalone e privacy-first.
+
+---
 
 ## Cos'è
 
