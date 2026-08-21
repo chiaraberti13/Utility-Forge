@@ -57,10 +57,10 @@ The tools share a philosophy, not a stack:
 
 ## Tools
 
-| Tool | What it does | Stack | Runs on | Folder |
-|---|---|---|---|---|
-| 📦 **EPS Barcode Generator** | Generates EAN-13 barcodes in vector EPS format straight from an Excel/CSV list — bulk, with ZIP download. | Single-file HTML/JS | Browser only | [`barcode-eps-wizard/`](barcode-eps-wizard) |
-| 🖼️ **PHP Image Converter** | Converts images between JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, with resize, crop presets and batch ZIP export, via a web UI. | Single-file PHP + GD/ImageMagick | Your own server | [`php-image-converter/`](php-image-converter) |
+| Tool | What it does | Stack | Runs on | Folder | Docs |
+|---|---|---|---|---|---|
+| 📦 **EPS Barcode Generator** | Generates EAN-13 barcodes in vector EPS format straight from an Excel/CSV list — bulk, with ZIP download. | Single-file HTML/JS | Browser only | [`barcode-eps-wizard/`](barcode-eps-wizard) | [README](barcode-eps-wizard/README.md) |
+| 🖼️ **PHP Image Converter** | Converts images between JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, with resize, crop presets and batch ZIP export, via a web UI. | Single-file PHP + GD/ImageMagick | Your own server | [`php-image-converter/`](php-image-converter) | [README](php-image-converter/README.md) |
 
 Each folder is self-contained: open `barcode-eps-wizard/barcode-eps-wizard.html` directly
 in a browser, or drop `php-image-converter/php-image-converter.php` on a PHP server —

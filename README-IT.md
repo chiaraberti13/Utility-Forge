@@ -58,10 +58,10 @@ I tool condividono una filosofia, non uno stack:
 
 ## Tool disponibili
 
-| Tool | Cosa fa | Stack | Funziona su | Cartella |
-|---|---|---|---|---|
-| 📦 **EPS Barcode Generator** | Genera barcode EAN-13 in formato vettoriale EPS direttamente da un elenco Excel/CSV — in massa, con download ZIP. | HTML/JS a file singolo | Solo browser | [`barcode-eps-wizard/`](barcode-eps-wizard) |
-| 🖼️ **PHP Image Converter** | Converte immagini tra JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, con ridimensionamento, ritagli predefiniti ed export ZIP in batch, tramite interfaccia web. | PHP a file singolo + GD/ImageMagick | Un tuo server | [`php-image-converter/`](php-image-converter) |
+| Tool | Cosa fa | Stack | Funziona su | Cartella | Docs |
+|---|---|---|---|---|---|
+| 📦 **EPS Barcode Generator** | Genera barcode EAN-13 in formato vettoriale EPS direttamente da un elenco Excel/CSV — in massa, con download ZIP. | HTML/JS a file singolo | Solo browser | [`barcode-eps-wizard/`](barcode-eps-wizard) | [README](barcode-eps-wizard/README-IT.md) |
+| 🖼️ **PHP Image Converter** | Converte immagini tra JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, con ridimensionamento, ritagli predefiniti ed export ZIP in batch, tramite interfaccia web. | PHP a file singolo + GD/ImageMagick | Un tuo server | [`php-image-converter/`](php-image-converter) | [README](php-image-converter/README-IT.md) |
 
 Ogni cartella è autonoma: si può aprire direttamente
 `barcode-eps-wizard/barcode-eps-wizard.html` nel browser, oppure caricare
