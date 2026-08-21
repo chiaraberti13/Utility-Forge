@@ -5,11 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub stars"></a>
-  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub forks"></a>
-  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Open issues"></a>
-  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="2 tools">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="License"></a>
+  <img src="assets/banner.svg" alt="Utility Forge" width="800">
 </p>
 
 A collection of standalone, privacy-first utility tools, in one repository. Every tool
@@ -17,7 +13,11 @@ is self-contained — open it and it just works, no account, no SaaS signup, no 
 leaving your browser or your own server.
 
 <p align="center">
-  <img src="assets/banner.svg" alt="Utility Forge" width="800">
+  <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub stars"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub forks"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Open issues"></a>
+  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="2 tools">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="License"></a>
 </p>
 
 <p align="center">

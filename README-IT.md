@@ -5,11 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="Stelle GitHub"></a>
-  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="Fork GitHub"></a>
-  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Issue aperte"></a>
-  <img src="https://img.shields.io/badge/tool-2-blue?style=for-the-badge" alt="2 tool">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="Licenza"></a>
+  <img src="assets/banner.svg" alt="Utility Forge" width="800">
 </p>
 
 Una raccolta di tool di utilità standalone, orientati alla privacy, in un unico
@@ -17,7 +13,11 @@ repository. Ogni tool è autonomo — lo apri e funziona, senza account, senza
 registrazione SaaS, senza che i dati escano dal tuo browser o dal tuo server.
 
 <p align="center">
-  <img src="assets/banner.svg" alt="Utility Forge" width="800">
+  <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="Stelle GitHub"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="Fork GitHub"></a>
+  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Issue aperte"></a>
+  <img src="https://img.shields.io/badge/tool-2-blue?style=for-the-badge" alt="2 tool">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="Licenza"></a>
 </p>
 
 <p align="center">
