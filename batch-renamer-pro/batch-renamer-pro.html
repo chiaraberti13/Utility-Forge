@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Renamer &amp; File Organizer Pro</title>
+
+    <!--
+        Nota di sicurezza: questo file è a scopo singolo (nessun server, nessun cookie/sessione).
+        Tutta la logica JavaScript vive nel file esterno batch-renamer-pro.js, caricato con un
+        normale <script src>, così la Content-Security-Policy qui sotto non ha bisogno di alcun
+        hash per script inline: script-src è limitato a 'self' (questa pagina + il file .js
+        adiacente) più le tre origini CDN da cui vengono caricate le librerie. Ogni valore che
+        proviene da file, cartelle o fogli Excel/CSV caricati dall'utente viene scritto nel DOM
+        solo tramite textContent (mai innerHTML/onclick con dati non fidati) e ogni nome file
+        proposto viene sanificato (caratteri non validi rimossi, lunghezza limitata) PRIMA di
+        essere passato a getFileHandle/removeEntry. La File System Access API, per progettazione,
+        sandboxa già getFileHandle/removeEntry alla sola cartella concessa dall'utente (non è
+        possibile uscirne, quindi il path traversal classico non si applica), ma i separatori di
+        percorso vengono comunque rimossi in modo difensivo perché non sono comunque caratteri
+        validi in un nome file su nessun sistema operativo.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.sheetjs.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+
+    <!-- SheetJS: lettura file Excel/CSV per il mapping di rinomina (versione fissata) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <!-- exifr: lettura best-effort della data di scatto EXIF dalle immagini (versione fissata) -->
+    <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+    <!-- Lucide Icons (versione fissata invece di @latest) -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            padding: 16px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 32px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .subtitle {
+            color: #737373;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .section {
+            margin-bottom: 28px;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fafafa;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn:hover { background: #2563eb; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { background: #e5e5e5; color: #a3a3a3; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: white;
+            color: #1a1a1a;
+            border: 1px solid #e5e5e5;
+        }
+        .btn-secondary:hover { background: #fafafa; border-color: #d4d4d4; }
+        .btn-secondary:disabled { background: #f5f5f5; color: #c4c4c4; border-color: #e5e5e5; }
+
+        .btn-danger {
+            background: white;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        .btn-danger:hover { background: #fef2f2; }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .toggle-row:last-child { margin-bottom: 0; }
+        .toggle-row label { cursor: pointer; }
+
+        .field-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .field-row:last-child { margin-bottom: 0; }
+        .field-row label { font-size: 13px; color: #737373; min-width: 140px; }
+
+        select, input[type="text"], input[type="number"] {
+            font-family: inherit;
+            font-size: 14px;
+            padding: 8px 10px;
+            border: 1px solid #d4d4d4;
+            border-radius: 6px;
+            background: white;
+            color: #1a1a1a;
+        }
+        select:focus, input:focus { outline: none; border-color: #3b82f6; }
+
+        .upload-area {
+            border: 2px dashed #d4d4d4;
+            border-radius: 8px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .upload-area:hover { border-color: #3b82f6; background: #f0f9ff; }
+        .upload-area.dragover { border-color: #3b82f6; background: #dbeafe; border-style: solid; }
+        .upload-hint { font-size: 13px; color: #737373; margin-top: 4px; }
+        #csvInput, #reuploadLogInput { display: none; }
+
+        #csvInfo {
+            display: none;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #15803d;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+
+        .table-wrap {
+            max-height: 340px;
+            overflow: auto;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #fafafa;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e5e5e5;
+            color: #737373;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        tbody td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #1a1a1a;
+            word-break: break-word;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        .preview-arrow { color: #a3a3a3; text-align: center; width: 24px; }
+        tr.preview-flagged td { background: #fffbeb; }
+        tr.preview-unchanged td { color: #a3a3a3; }
+        .preview-flags { color: #dc2626; font-size: 12px; }
+
+        .progress-container { display: none; margin-top: 20px; }
+        .progress-bar {
+            width: 100%; height: 8px; background: #f5f5f5;
+            border-radius: 4px; overflow: hidden; margin-bottom: 8px;
+        }
+        .progress-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.2s ease; border-radius: 4px; }
+        .progress-text { font-size: 13px; color: #737373; text-align: center; }
+
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+        .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .alert-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+        .unsupported-banner {
+            display: none;
+            align-items: flex-start;
+            gap: 16px;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 28px;
+            background: white;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+        }
+        .unsupported-banner h2 { font-size: 18px; margin-bottom: 8px; color: #1a1a1a; }
+        .unsupported-banner p { font-size: 14px; color: #525252; line-height: 1.6; margin-bottom: 8px; }
+        .unsupported-banner ul { font-size: 14px; color: #525252; line-height: 1.7; margin: 8px 0 8px 20px; }
+
+        .footer {
+            padding: 24px 32px;
+            text-align: center;
+            color: #a3a3a3;
+            font-size: 13px;
+            border-top: 1px solid #e5e5e5;
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #737373;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+
+        .folder-info { display: none; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            background: #f0f0f0;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header { padding: 24px 20px; }
+            .content { padding: 20px; }
+            h1 { font-size: 20px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .field-row label { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="unsupported-banner" id="unsupportedBanner">
+        <i data-lucide="alert-triangle" size="32" style="color:#dc2626; flex-shrink:0;"></i>
+        <div>
+            <h2>Browser non supportato</h2>
+            <p>
+                <strong>Batch Renamer &amp; File Organizer Pro</strong> rinomina i file direttamente
+                nella tua cartella locale usando la <strong>File System Access API</strong>
+                (<code>window.showDirectoryPicker()</code>). Questa API è disponibile solo nei
+                browser basati su <strong>Chromium</strong>.
+            </p>
+            <p>Browser supportati:</p>
+            <ul>
+                <li>✅ Google Chrome (versione 86 o superiore)</li>
+                <li>✅ Microsoft Edge (versione 86 o superiore)</li>
+                <li>✅ Opera / Brave (basati su Chromium)</li>
+                <li>❌ Mozilla Firefox — non supportato</li>
+                <li>❌ Apple Safari — non supportato</li>
+            </ul>
+            <p>Apri questa pagina in Chrome, Edge, Opera o Brave per continuare.</p>
+        </div>
+    </div>
+
+    <div class="container" id="appRoot" style="display:none;">
+        <div class="header">
+            <h1>
+                <i data-lucide="folder-cog" style="color:#3b82f6;"></i>
+                Batch Renamer &amp; File Organizer Pro
+            </h1>
+            <p class="subtitle">Rinomina in blocco i file di una cartella reale, direttamente dal browser — con anteprima obbligatoria e rollback</p>
+        </div>
+
+        <div class="content">
+
+            <!-- Alert -->
+            <div class="alert" id="alertBox"><i data-lucide="info" size="20"></i><span id="alertText"></span></div>
+
+            <!-- Step 1: cartella -->
+            <div class="section">
+                <div class="section-title"><i data-lucide="folder-open" size="18" style="color:#3b82f6;"></i> 1. Seleziona la cartella</div>
+                <div class="card">
+                    <button class="btn" id="pickFolderBtn"><i data-lucide="folder-input" size="18"></i> Scegli cartella…</button>
+                    <div class="folder-info" id="folderInfo">
+                        <span class="badge"><i data-lucide="folder" size="14"></i> <span id="folderName"></span></span>
+                        <span class="badge" id="fileCount">0 file</span>
+                    </div>
+                    <div class="toggle-row" style="margin-top:16px;">
+                        <input type="checkbox" id="recursiveToggle">
+                        <label for="recursiveToggle">Includi sottocartelle (ricorsivo)</label>
+                    </div>
+                    <div class="toggle-row" id="flattenRow" style="display:none;">
+                        <input type="checkbox" id="flattenToggle" checked>
+                        <label for="flattenToggle">Appiattisci nella cartella principale (deseleziona per mantenere la struttura)</label>
+                    </div>
+                </div>
+
+                <div class="section" id="fileListSection" style="display:none; margin-top:16px; margin-bottom:0;">
+                    <div class="field-row">
+                        <label for="sortKey">Ordina per</label>
+                        <select id="sortKey">
+                            <option value="name">Nome</option>
+                            <option value="date">Data modifica</option>
+                            <option value="size">Dimensione</option>
+                        </select>
+                        <select id="sortDir">
+                            <option value="asc">Crescente</option>
+                            <option value="desc">Decrescente</option>
+                        </select>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Nome file</th><th>Dimensione</th><th>Data modifica</th><th>Data EXIF</th></tr></thead>
+                            <tbody id="fileListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: CSV/XLSX mapping -->
+            <div class="section">
+                <div class="section-title"><i data-lucide="table" size="18" style="color:#3b82f6;"></i> 2. Mapping da Excel/CSV (opzionale)</div>
+                <div class="card">
+                    <div class="upload-area" id="csvUploadArea">
+                        <i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i>
+                        <div class="upload-hint">Trascina qui il file Excel/CSV con i nuovi nomi, o clicca per selezionarlo</div>
+                        <input type="file" id="csvInput" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div id="csvInfo"></div>
+
+                    <div class="field-row" style="margin-top:16px;">
+                        <label>Formato del file</label>
+                        <span style="display:flex; gap:16px; font-size:14px;">
+                            <span><input type="radio" name="csvMode" value="twoColumn" id="csvModeTwo" checked> <label for="csvModeTwo">Due colonne (nome attuale / nome nuovo)</label></span>
+                            <span><input type="radio" name="csvMode" value="singleColumn" id="csvModeSingle"> <label for="csvModeSingle">Colonna singola (in ordine di file)</label></span>
+                        </span>
+                    </div>
+                    <div class="field-row" id="csvColsRow">
+                        <label for="csvFromCol">Colonna nome attuale</label>
+                        <select id="csvFromCol"></select>
+                        <label for="csvToCol">Colonna nome nuovo</label>
+                        <select id="csvToCol"></select>
+                    </div>
+                    <div class="field-row" id="csvSingleColRow" style="display:none;">
+                        <label for="csvSingleCol">Colonna nomi nuovi</label>
+                        <select id="csvSingleCol"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: template -->
+            <div class="section">
+                <div class="section-title"><i data-lucide="text-cursor-input" size="18" style="color:#3b82f6;"></i> 3. Modello di rinomina (opzionale)</div>
+                <div class="card">
+                    <div class="field-row">
+                        <label for="templateInput">Pattern</label>
+                        <input type="text" id="templateInput" placeholder="{csv:Prodotto}_{date:YYYYMMDD}_{seq:000}{ext}" style="flex:1; min-width:260px;">
+                    </div>
+                    <div class="field-row">
+                        <label for="seqStart">Numero iniziale sequenza</label>
+                        <input type="number" id="seqStart" value="1" min="0" style="width:100px;">
+                        <label for="dateFormat" style="min-width:auto;">Formato data</label>
+                        <input type="text" id="dateFormat" value="YYYYMMDD" style="width:140px;">
+                    </div>
+                    <div class="upload-hint" style="margin-top:8px;">
+                        Placeholder disponibili: <code>{orig}</code> <code>{ext}</code> <code>{seq}</code>/<code>{seq:000}</code>
+                        <code>{date}</code>/<code>{date:YYYYMMDD}</code> <code>{exifdate}</code> <code>{csv:NomeColonna}</code> — combinabili liberamente.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: preview -->
+            <div class="section">
+                <div class="section-title"><i data-lucide="eye" size="18" style="color:#3b82f6;"></i> 4. Anteprima (obbligatoria) ed esecuzione</div>
+                <div class="card">
+                    <div class="toggle-row">
+                        <input type="checkbox" id="collisionToggle" checked>
+                        <label for="collisionToggle">Risolvi automaticamente le collisioni di nome (suffisso numerico incrementale)</label>
+                    </div>
+                    <div class="actions">
+                        <button class="btn" id="buildPreviewBtn"><i data-lucide="list-checks" size="18"></i> Genera anteprima</button>
+                    </div>
+
+                    <div id="previewSection" style="display:none; margin-top:16px;">
+                        <div class="upload-hint" id="previewSummary" style="margin-bottom:8px;"></div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Nome attuale</th><th></th><th>Nome nuovo</th><th>Avvisi</th></tr></thead>
+                                <tbody id="previewBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="toggle-row" id="fuzzyConfirmRow" style="display:none;">
+                            <input type="checkbox" id="confirmFuzzyToggle">
+                            <label for="confirmFuzzyToggle">Ho rivisto le corrispondenze approssimate evidenziate nella tabella e confermo di procedere</label>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="confirmRunBtn"><i data-lucide="play" size="18"></i> Conferma ed esegui rinomina</button>
+                        </div>
+                    </div>
+
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                        <div class="progress-text" id="progressText">0 / 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: risultati / rollback -->
+            <div class="section" id="resultsSection" style="display:none;">
+                <div class="section-title"><i data-lucide="history" size="18" style="color:#3b82f6;"></i> 5. Risultati e rollback</div>
+                <div class="card">
+                    <div class="upload-hint" id="resultsSummary" style="margin-bottom:12px;"></div>
+                    <div class="actions">
+                        <button class="btn btn-secondary" id="downloadReportBtn"><i data-lucide="file-down" size="18"></i> Scarica report CSV</button>
+                        <button class="btn btn-danger" id="undoLastBtn" disabled><i data-lucide="undo-2" size="18"></i> Annulla ultima operazione</button>
+                        <button class="btn btn-secondary" id="downloadLogBtn"><i data-lucide="save" size="18"></i> Scarica log rollback</button>
+                        <button class="btn btn-secondary" id="reuploadLogBtn"><i data-lucide="upload" size="18"></i> Ripristina da log salvato</button>
+                        <input type="file" id="reuploadLogInput" accept=".csv,.xlsx,.xls">
+                    </div>
+                    <div class="upload-hint" style="margin-top:12px;">
+                        Il pulsante "Annulla ultima operazione" funziona solo finché questa scheda resta aperta e la cartella
+                        rimane selezionata (l'accesso alla cartella non sopravvive alla chiusura della pagina). Per annullare
+                        una rinomina di una sessione precedente, ri-seleziona la stessa cartella con "Scegli cartella…" e usa
+                        "Ripristina da log salvato" caricando il file CSV scaricato allora.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
+            <div style="color:#d4d4d4;">Tutta l'elaborazione avviene nel tuo browser: nessun file viene caricato su un server</div>
+        </div>
+    </div>
+
+    <script src="batch-renamer-pro.js"></script>
+</body>
+</html>
