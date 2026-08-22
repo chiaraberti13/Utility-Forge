@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy & Metadata Forensics Studio</title>
+
+    <!--
+        Security note: this file is single-purpose (no server, no cookies/session), so the main
+        attack surface is parsing untrusted images/PDF/Office files and the three CDN libraries
+        loaded below. All the JavaScript logic lives in the separate privacy-metadata-scrubber.js
+        file (loaded with a plain relative <script src>, which works fine over file:// exactly like
+        loading a local image would), so the CSP script-src below only needs 'self' plus the three
+        CDN origins -- no inline-script hash to compute or keep in sync, unlike the older single-file
+        pattern used by the barcode tool. Every value derived from an uploaded file is written to the
+        DOM with textContent and DOM node creation only, never innerHTML or an inline onclick string,
+        and GPS coordinates found in EXIF are shown as plain decimal text only -- this app never
+        fetches a map tile or any other network resource on your behalf, so a location embedded in a
+        photo is never silently leaked to a third-party server.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+
+    <!-- exifr: parses EXIF / GPS / IPTC / XMP out of images (pinned version) -->
+    <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+
+    <!-- pdf-lib: reads and rewrites PDF document metadata (pinned version) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+    <!-- JSZip: opens/rebuilds Office Open XML containers and packages batch ZIP downloads (pinned version) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- Lucide Icons (pinned version instead of @latest, so its content can't change without notice) -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            padding: 16px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 32px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .subtitle {
+            color: #737373;
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        section {
+            margin-bottom: 28px;
+        }
+
+        h2 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-area {
+            border: 2px dashed #d4d4d4;
+            border-radius: 8px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background: #dbeafe;
+            border-style: solid;
+        }
+
+        .upload-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #737373;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Profiles bar */
+        .profiles-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 16px;
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+        }
+
+        .profiles-bar label {
+            font-size: 13px;
+            color: #737373;
+        }
+
+        select, input[type="text"] {
+            font-family: inherit;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #d4d4d4;
+            background: white;
+            color: #1a1a1a;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        /* Category checkboxes */
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #fafafa;
+            cursor: pointer;
+        }
+
+        .category-item:hover {
+            border-color: #d4d4d4;
+        }
+
+        .category-item input[type="checkbox"] {
+            margin-top: 3px;
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
+            flex-shrink: 0;
+        }
+
+        .category-text strong {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .category-text span {
+            font-size: 12px;
+            color: #737373;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            background: #e5e5e5;
+            color: #a3a3a3;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #1a1a1a;
+            border: 1px solid #e5e5e5;
+        }
+
+        .btn-secondary:hover {
+            background: #fafafa;
+            border-color: #d4d4d4;
+        }
+
+        .btn-secondary:disabled {
+            background: white;
+            color: #d4d4d4;
+        }
+
+        .btn-small {
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: #737373;
+            text-align: center;
+        }
+
+        .stats {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 26px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #737373;
+            font-weight: 400;
+        }
+
+        .file-list {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .file-card {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .file-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #fafafa;
+            border-bottom: 1px solid #e5e5e5;
+            cursor: pointer;
+        }
+
+        .file-card-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #e5e5e5;
+            flex-shrink: 0;
+        }
+
+        .file-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-card-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-card-meta {
+            font-size: 12px;
+            color: #737373;
+            margin-top: 2px;
+        }
+
+        .file-card-status {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .status-pending { background: #f5f5f5; color: #737373; }
+        .status-inspected { background: #eff6ff; color: #2563eb; }
+        .status-scrubbed { background: #f0fdf4; color: #15803d; }
+        .status-error { background: #fef2f2; color: #dc2626; }
+
+        .file-card-body {
+            display: none;
+            padding: 16px;
+        }
+
+        .file-card-body.open {
+            display: block;
+        }
+
+        .file-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        table.meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+
+        table.meta-table th, table.meta-table td {
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: top;
+            word-break: break-word;
+        }
+
+        table.meta-table th {
+            color: #737373;
+            font-weight: 500;
+            width: 220px;
+        }
+
+        table.meta-table tr:last-child th,
+        table.meta-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .section-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #a3a3a3;
+            margin: 14px 0 8px;
+        }
+
+        .empty-note {
+            font-size: 13px;
+            color: #a3a3a3;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .heuristic-note {
+            font-size: 12px;
+            color: #737373;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .gps-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .gps-link:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .footer {
+            padding: 24px 32px;
+            text-align: center;
+            color: #a3a3a3;
+            font-size: 13px;
+            border-top: 1px solid #e5e5e5;
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #2563eb;
+            margin-right: 6px;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header { padding: 24px 20px; }
+            .content { padding: 20px; }
+            h1 { font-size: 20px; }
+            .subtitle { font-size: 14px; }
+            .upload-area { padding: 32px 16px; }
+            .upload-icon { width: 56px; height: 56px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .stat-number { font-size: 22px; }
+            .footer { padding: 20px; }
+            table.meta-table th { width: 130px; }
+            .profiles-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i data-lucide="shield-check" style="color: #3b82f6;"></i>
+                Privacy & Metadata Forensics Studio
+            </h1>
+            <p class="subtitle">
+                It doesn't just strip EXIF like the typical free tool — it inspects and lets you
+                selectively scrub hidden metadata across images, PDFs, and Office documents, entirely
+                in your browser. Nothing is ever uploaded anywhere.
+            </p>
+        </div>
+
+        <div class="content">
+            <section>
+                <h2><i data-lucide="sliders-horizontal" size="16" style="color:#3b82f6;"></i> Scrub profile</h2>
+                <div class="profiles-bar">
+                    <label for="profileSelect">Saved profile</label>
+                    <select id="profileSelect">
+                        <option value="">— none (custom selection) —</option>
+                    </select>
+                    <button class="btn btn-secondary btn-small" id="deleteProfileBtn" type="button">
+                        <i data-lucide="trash-2" size="14"></i> Delete
+                    </button>
+                    <input type="text" id="profileNameInput" placeholder="Profile name" style="flex:1; min-width:140px;">
+                    <button class="btn btn-secondary btn-small" id="saveProfileBtn" type="button">
+                        <i data-lucide="save" size="14"></i> Save current selection
+                    </button>
+                </div>
+            </section>
+
+            <section>
+                <h2><i data-lucide="list-checks" size="16" style="color:#3b82f6;"></i> What to remove</h2>
+                <div class="categories" id="categoriesGrid">
+                    <!-- populated by JS -->
+                </div>
+            </section>
+
+            <section>
+                <h2><i data-lucide="upload-cloud" size="16" style="color:#3b82f6;"></i> Files</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i data-lucide="upload" size="32" stroke-width="1.5" style="color: #3b82f6;"></i>
+                    </div>
+                    <div class="upload-text">Drag files here or click to select</div>
+                    <div class="upload-hint">Images (JPEG, PNG, WEBP), PDF, Word/Excel/PowerPoint (.docx, .xlsx, .pptx) — up to 50MB each, 200 files per batch</div>
+                    <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx,image/jpeg,image/png,image/webp,application/pdf">
+                </div>
+
+                <div class="stats" id="stats">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number" id="totalCount">0</div>
+                            <div class="stat-label">Files loaded</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="inspectedCount">0</div>
+                            <div class="stat-label">Inspected</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="scrubbedCount">0</div>
+                            <div class="stat-label">Scrubbed</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="errorCount">0</div>
+                            <div class="stat-label">Errors</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn" id="inspectAllBtn" disabled>
+                        <i data-lucide="search" size="18"></i> Inspect all
+                    </button>
+                    <button class="btn" id="scrubAllBtn" disabled>
+                        <i data-lucide="eraser" size="18"></i> Scrub all
+                    </button>
+                    <button class="btn btn-secondary" id="downloadZipBtn" disabled>
+                        <i data-lucide="package" size="18"></i> Download ZIP of scrubbed files
+                    </button>
+                    <button class="btn btn-secondary" id="downloadCsvBtn" disabled>
+                        <i data-lucide="file-spreadsheet" size="18"></i> Report (CSV)
+                    </button>
+                    <button class="btn btn-secondary" id="downloadJsonBtn" disabled>
+                        <i data-lucide="file-json" size="18"></i> Report (JSON)
+                    </button>
+                    <button class="btn btn-secondary" id="clearAllBtn">
+                        <i data-lucide="x" size="18"></i> Clear all
+                    </button>
+                </div>
+
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0 / 0</div>
+                </div>
+
+                <div class="alert alert-success" id="successAlert">
+                    <i data-lucide="check-circle" size="20"></i>
+                    <span id="successText"></span>
+                </div>
+                <div class="alert alert-error" id="errorAlert">
+                    <i data-lucide="alert-circle" size="20"></i>
+                    <span id="errorText"></span>
+                </div>
+
+                <div class="file-list" id="fileList"></div>
+            </section>
+        </div>
+
+        <div class="footer">
+            <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
+            <div style="color: #d4d4d4;">All parsing and scrubbing happens locally in your browser. Nothing is ever uploaded.</div>
+        </div>
+    </div>
+
+    <script src="privacy-metadata-scrubber.js"></script>
+</body>
+</html>

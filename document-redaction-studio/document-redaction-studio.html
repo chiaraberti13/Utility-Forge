@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Redaction &amp; Sanitization Studio</title>
+
+    <!--
+        Nota di sicurezza: questo file è a scopo singolo (nessun server, nessun cookie/sessione).
+        Tutta la logica JavaScript vive nel file esterno document-redaction-studio.js, caricato con
+        un normale <script src> relativo (non inline): questo permette una CSP script-src ristretta
+        a 'self' più le due origini CDN, senza dover usare un hash per uno script inline e senza
+        alcuna eccezione 'unsafe-inline'/'unsafe-eval' per il JavaScript. Ogni valore che deriva da
+        un file caricato dall'utente (nome file, testo estratto da un PDF, ecc.) viene inserito nel
+        DOM solo tramite textContent, mai innerHTML o attributi onclick inline. worker-src include
+        'blob:' e l'origine cdnjs perché pdf.js istanzia il proprio worker da un Blob costruito a
+        partire dallo script caricato da CDN.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; worker-src 'self' blob: https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'none'">
+
+    <!-- pdf.js (versione fissata) per leggere/renderizzare PDF ed estrarne il testo -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+
+    <!-- pdf-lib (versione fissata) per ricostruire un nuovo PDF da immagini di pagina -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+    <!-- Lucide Icons (versione fissata invece di @latest) -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            padding: 16px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 32px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .subtitle {
+            color: #737373;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        h2 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .section-hint {
+            color: #737373;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #737373;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: -1px;
+        }
+
+        .tab-btn:hover {
+            color: #1a1a1a;
+        }
+
+        .tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .mode-panel {
+            display: none;
+        }
+
+        .mode-panel.active {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed #d4d4d4;
+            border-radius: 8px;
+            padding: 40px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background: #dbeafe;
+            border-style: solid;
+        }
+
+        .upload-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            margin-bottom: 14px;
+        }
+
+        .upload-text {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+
+        .upload-hint {
+            font-size: 13px;
+            color: #737373;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: #2563eb;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            background: #e5e5e5;
+            color: #a3a3a3;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #1a1a1a;
+            border: 1px solid #e5e5e5;
+        }
+
+        .btn-secondary:hover {
+            background: #fafafa;
+            border-color: #d4d4d4;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-sm {
+            padding: 7px 12px;
+            font-size: 13px;
+        }
+
+        label.field-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"], input[type="number"] {
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #1a1a1a;
+            width: 100%;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        input[type="color"] {
+            width: 44px;
+            height: 36px;
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
+            padding: 2px;
+            cursor: pointer;
+            background: white;
+        }
+
+        .field-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .field {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            padding: 6px 0;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+            background: repeating-conic-gradient(#f5f5f5 0% 25%, #ffffff 0% 50%) 50% / 20px 20px;
+            touch-action: none;
+        }
+
+        .canvas-wrap canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .canvas-wrap canvas.overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .canvas-scroll {
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .page-block {
+            margin-bottom: 24px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+        }
+
+        .page-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .page-block-stats {
+            font-size: 12px;
+            color: #737373;
+            font-weight: 400;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 3px 8px;
+            border-radius: 100px;
+        }
+
+        .badge-orange {
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+
+        .badge-red {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .badge-blue {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .alert {
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-size: 14px;
+            display: none;
+            align-items: flex-start;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        .note-box {
+            background: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-size: 13px;
+            color: #525252;
+            line-height: 1.6;
+            margin-top: 16px;
+        }
+
+        .note-box strong {
+            color: #1a1a1a;
+        }
+
+        .verify-result {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .verify-ok {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+        }
+
+        .verify-fail {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+        }
+
+        .batch-file-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .batch-file-name {
+            font-weight: 500;
+            color: #1a1a1a;
+            word-break: break-all;
+        }
+
+        .batch-file-status {
+            color: #737373;
+            white-space: nowrap;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #e5e5e5;
+            margin: 24px 0;
+        }
+
+        .footer {
+            padding: 24px 32px;
+            text-align: center;
+            color: #a3a3a3;
+            font-size: 13px;
+            border-top: 1px solid #e5e5e5;
+            background: #fafafa;
+        }
+
+        .toggle-warning {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 640px) {
+            .header {
+                padding: 24px 20px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i data-lucide="shield-off" style="color: #dc2626;"></i>
+                Document Redaction &amp; Sanitization Studio
+            </h1>
+            <p class="subtitle">Redazione vera: distrugge i pixel/il testo sottostante, non li nasconde sotto un rettangolo</p>
+        </div>
+
+        <div class="content">
+            <div class="note-box" id="introNote">
+                <strong>Perché "vera" redazione?</strong> La maggior parte degli strumenti gratuiti disegna un
+                rettangolo nero <em>sopra</em> il contenuto: testo ed immagine originali restano nel file e sono
+                estraibili con un copia-incolla o un semplice script. Questo strumento invece <strong>modifica i
+                pixel del canvas</strong> alla sorgente (immagini) oppure <strong>ricostruisce il PDF da zero come
+                immagini di pagina</strong> (PDF), così il contenuto oscurato non esiste più da nessuna parte nel
+                file esportato — e lo verifica per te dopo l'elaborazione.
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" id="tabImage" data-mode="image">
+                    <i data-lucide="image" size="16"></i>
+                    Redazione Immagine
+                </button>
+                <button class="tab-btn" id="tabPdf" data-mode="pdf">
+                    <i data-lucide="file-text" size="16"></i>
+                    Redazione PDF
+                </button>
+                <button class="tab-btn" id="tabBatch" data-mode="batch">
+                    <i data-lucide="layers" size="16"></i>
+                    Batch PDF
+                </button>
+            </div>
+
+            <!-- ============ MODE A: IMAGE ============ -->
+            <div class="mode-panel active" id="panelImage">
+                <div class="card">
+                    <h2><i data-lucide="upload" size="18" style="color:#3b82f6;"></i> 1. Carica un'immagine</h2>
+                    <p class="section-hint">JPEG, PNG o WEBP, fino a 30&nbsp;MB.</p>
+                    <div class="upload-area" id="imgUploadArea">
+                        <div class="upload-icon">
+                            <i data-lucide="image-plus" size="28" stroke-width="1.5" style="color:#3b82f6;"></i>
+                        </div>
+                        <div class="upload-text">Trascina l'immagine qui o clicca per selezionare</div>
+                        <div class="upload-hint">.jpg, .jpeg, .png, .webp — max 30&nbsp;MB</div>
+                        <input type="file" id="imgFileInput" accept="image/jpeg,image/png,image/webp">
+                    </div>
+                    <div class="alert alert-error" id="imgErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                </div>
+
+                <div class="card hidden" id="imgEditorCard">
+                    <h2><i data-lucide="square-dashed-mouse-pointer" size="18" style="color:#3b82f6;"></i> 2. Disegna i rettangoli da oscurare</h2>
+                    <p class="section-hint">Trascina col mouse (o col dito) sopra l'immagine per creare un box. Puoi crearne quanti vuoi.</p>
+
+                    <div class="field-row" style="align-items:flex-end;">
+                        <div class="field" style="max-width:120px;">
+                            <label class="field-label" for="imgBoxColor">Colore box</label>
+                            <input type="color" id="imgBoxColor" value="#000000">
+                        </div>
+                        <div class="field" style="flex:2;">
+                            <span class="badge badge-red" id="imgBoxCount">0 box disegnati</span>
+                        </div>
+                    </div>
+
+                    <div class="canvas-scroll">
+                        <div class="canvas-wrap" id="imgCanvasWrap">
+                            <canvas id="imgCanvas"></canvas>
+                            <canvas class="overlay-canvas" id="imgOverlayCanvas"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-secondary btn-sm" id="imgUndoBtn"><i data-lucide="undo-2" size="16"></i> Annulla ultimo box</button>
+                        <button class="btn btn-secondary btn-sm" id="imgClearBtn"><i data-lucide="eraser" size="16"></i> Cancella tutti</button>
+                        <button class="btn btn-danger" id="imgApplyBtn"><i data-lucide="stamp" size="18"></i> Applica redazione</button>
+                        <button class="btn btn-secondary hidden" id="imgDownloadBtn"><i data-lucide="download" size="18"></i> Scarica immagine redatta</button>
+                    </div>
+
+                    <div class="alert alert-success" id="imgSuccessAlert"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                    <div class="note-box">
+                        "Applica redazione" dipinge rettangoli pieni <strong>direttamente sui pixel del canvas</strong>
+                        (non su un livello separato) e poi ri-esporta l'immagine da zero con <code>canvas.toBlob()</code>:
+                        il contenuto originale sotto ogni box viene sovrascritto in modo permanente e non è più
+                        recuperabile dal file esportato. Come effetto collaterale, la ri-codifica dell'immagine
+                        rimuove anche i metadati EXIF eventualmente presenti (posizione GPS, modello fotocamera,
+                        data/ora, ecc.), perché l'immagine esportata è un'immagine completamente nuova.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ MODE B: PDF (interactive) ============ -->
+            <div class="mode-panel" id="panelPdf">
+                <div class="card">
+                    <h2><i data-lucide="upload" size="18" style="color:#3b82f6;"></i> 1. Carica un PDF</h2>
+                    <p class="section-hint">Fino a 50&nbsp;MB e 300 pagine. Le pagine vengono renderizzate a ~150dpi per l'editor.</p>
+                    <div class="upload-area" id="pdfUploadArea">
+                        <div class="upload-icon">
+                            <i data-lucide="file-plus-2" size="28" stroke-width="1.5" style="color:#3b82f6;"></i>
+                        </div>
+                        <div class="upload-text">Trascina il PDF qui o clicca per selezionare</div>
+                        <div class="upload-hint">.pdf — max 50&nbsp;MB, max 300 pagine</div>
+                        <input type="file" id="pdfFileInput" accept="application/pdf,.pdf">
+                    </div>
+                    <div class="progress-bar" id="pdfLoadProgress"><div class="progress-fill" id="pdfLoadProgressFill"></div></div>
+                    <div class="alert alert-error" id="pdfErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                </div>
+
+                <div class="card hidden" id="pdfEditorCard">
+                    <h2><i data-lucide="search" size="18" style="color:#3b82f6;"></i> 2. Rileva dati sensibili (opzionale)</h2>
+                    <p class="section-hint">Analizza il testo estratto da ogni pagina e propone box <span style="color:#c2410c;font-weight:600;">arancioni</span> — non sono ancora una redazione: vanno confermati a mano cliccandoci sopra (diventano <span style="color:#dc2626;font-weight:600;">rossi</span>).</p>
+
+                    <div class="checkbox-grid" id="pdfRuleset">
+                        <label class="checkbox-row"><input type="checkbox" value="email" checked> Indirizzi email</label>
+                        <label class="checkbox-row"><input type="checkbox" value="phone" checked> Numeri di telefono</label>
+                        <label class="checkbox-row"><input type="checkbox" value="iban" checked> IBAN</label>
+                        <label class="checkbox-row"><input type="checkbox" value="creditcard" checked> Numeri di carta di credito</label>
+                        <label class="checkbox-row"><input type="checkbox" value="codicefiscale" checked> Codice fiscale (IT)</label>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn" id="pdfDetectBtn"><i data-lucide="scan-search" size="18"></i> Rileva dati sensibili</button>
+                        <button class="btn btn-secondary btn-sm" id="pdfConfirmAllBtn"><i data-lucide="check-check" size="16"></i> Conferma tutti i suggerimenti</button>
+                        <button class="btn btn-secondary btn-sm" id="pdfClearBoxesBtn"><i data-lucide="eraser" size="16"></i> Rimuovi tutti i box</button>
+                        <span class="badge badge-orange" id="pdfSuggestedCount">0 suggeriti</span>
+                        <span class="badge badge-red" id="pdfConfirmedCount">0 confermati</span>
+                    </div>
+
+                    <hr class="divider">
+
+                    <h2><i data-lucide="square-dashed-mouse-pointer" size="18" style="color:#3b82f6;"></i> 3. Rivedi le pagine e disegna box manuali</h2>
+                    <p class="section-hint">Puoi disegnare altri box a mano su qualsiasi pagina (diventano subito rossi/confermati). Clic su un box arancione = conferma. Clic su un box rosso = rimuovilo.</p>
+
+                    <div id="pdfPagesContainer"></div>
+
+                    <hr class="divider">
+
+                    <h2><i data-lucide="stamp" size="18" style="color:#3b82f6;"></i> 4. Opzioni di esportazione e applicazione</h2>
+
+                    <div class="field-row">
+                        <div class="field">
+                            <label class="field-label" for="pdfWatermarkText">Testo filigrana (opzionale)</label>
+                            <input type="text" id="pdfWatermarkText" placeholder="es. RISERVATO">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="pdfBatesPrefix">Prefisso numerazione Bates (opzionale)</label>
+                            <input type="text" id="pdfBatesPrefix" placeholder="es. DOC-">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="pdfBatesStart">Numero iniziale Bates</label>
+                            <input type="number" id="pdfBatesStart" value="1" min="0">
+                        </div>
+                    </div>
+
+                    <div class="note-box">
+                        "Applica redazione" dipinge tutti i box <strong>confermati</strong> in nero direttamente sui
+                        pixel di ciascuna pagina già renderizzata, poi esporta <strong>ogni</strong> pagina del
+                        documento (con o senza redazioni) come immagine appiattita e ricostruisce un PDF
+                        completamente nuovo a partire da queste immagini con pdf-lib. Questo converte l'intero
+                        documento in immagini di pagina: è esattamente ciò che garantisce che <strong>non resti
+                        testo estraibile da nessuna parte</strong> nel file finale, non solo sotto i box neri — al
+                        prezzo che il PDF risultante non è più selezionabile/ricercabile come testo. È la tecnica
+                        corretta e ben nota per questo scopo, senza affidarsi a una fragile "chirurgia" del livello
+                        di testo di un PDF esistente (nessuno strumento può farlo in modo davvero sicuro).
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-danger" id="pdfApplyBtn"><i data-lucide="stamp" size="18"></i> Applica redazione e ricostruisci PDF</button>
+                        <button class="btn btn-secondary hidden" id="pdfDownloadBtn"><i data-lucide="download" size="18"></i> Scarica PDF redatto</button>
+                    </div>
+
+                    <div class="progress-bar" id="pdfApplyProgress"><div class="progress-fill" id="pdfApplyProgressFill"></div></div>
+                    <div class="alert alert-error" id="pdfApplyErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+
+                    <div class="verify-result" id="pdfVerifyResult"></div>
+                </div>
+            </div>
+
+            <!-- ============ MODE C: BATCH PDF ============ -->
+            <div class="mode-panel" id="panelBatch">
+                <div class="card">
+                    <h2><i data-lucide="upload" size="18" style="color:#3b82f6;"></i> 1. Carica più PDF</h2>
+                    <p class="section-hint">Ogni file rispetta comunque i limiti di 50&nbsp;MB e 300 pagine. Vengono elaborati uno alla volta.</p>
+                    <div class="upload-area" id="batchUploadArea">
+                        <div class="upload-icon">
+                            <i data-lucide="files" size="28" stroke-width="1.5" style="color:#3b82f6;"></i>
+                        </div>
+                        <div class="upload-text">Trascina qui più PDF o clicca per selezionarli</div>
+                        <div class="upload-hint">.pdf — selezione multipla</div>
+                        <input type="file" id="batchFileInput" accept="application/pdf,.pdf" multiple>
+                    </div>
+                    <div class="alert alert-error" id="batchErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                </div>
+
+                <div class="card hidden" id="batchConfigCard">
+                    <h2><i data-lucide="settings-2" size="18" style="color:#3b82f6;"></i> 2. Regole di rilevamento (riutilizzabili)</h2>
+                    <div class="checkbox-grid" id="batchRuleset">
+                        <label class="checkbox-row"><input type="checkbox" value="email" checked> Indirizzi email</label>
+                        <label class="checkbox-row"><input type="checkbox" value="phone" checked> Numeri di telefono</label>
+                        <label class="checkbox-row"><input type="checkbox" value="iban" checked> IBAN</label>
+                        <label class="checkbox-row"><input type="checkbox" value="creditcard" checked> Numeri di carta di credito</label>
+                        <label class="checkbox-row"><input type="checkbox" value="codicefiscale" checked> Codice fiscale (IT)</label>
+                    </div>
+
+                    <div class="checkbox-row" style="margin-top:12px;">
+                        <input type="checkbox" id="batchAutoApply">
+                        <label for="batchAutoApply">Applica automaticamente i rilevamenti senza revisione manuale</label>
+                    </div>
+                    <div class="alert alert-warning toggle-warning" id="batchAutoApplyWarning">
+                        <i data-lucide="triangle-alert" size="18"></i>
+                        <span>Attenzione: con questa opzione attiva, tutti i box rilevati automaticamente (email, telefoni,
+                        IBAN, carte, codici fiscali) verranno oscurati <strong>senza revisione umana</strong>. I regex usati
+                        riducono i falsi positivi (es. checksum di Luhn per le carte) ma non sono infallibili: possono
+                        sfuggire dati sensibili non riconosciuti (falsi negativi) o essere oscurati dati che non lo erano
+                        (falsi positivi). Usa questa modalità solo se accetti questo compromesso per l'elaborazione massiva.</span>
+                    </div>
+
+                    <hr class="divider">
+
+                    <div class="field-row">
+                        <div class="field">
+                            <label class="field-label" for="batchWatermarkText">Testo filigrana (opzionale)</label>
+                            <input type="text" id="batchWatermarkText" placeholder="es. RISERVATO">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="batchBatesPrefix">Prefisso numerazione Bates (opzionale)</label>
+                            <input type="text" id="batchBatesPrefix" placeholder="es. DOC-">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="batchBatesStart">Numero iniziale Bates</label>
+                            <input type="number" id="batchBatesStart" value="1" min="0">
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-danger" id="batchRunBtn"><i data-lucide="play" size="18"></i> Avvia elaborazione batch</button>
+                    </div>
+
+                    <div class="progress-bar" id="batchProgress"><div class="progress-fill" id="batchProgressFill"></div></div>
+                    <div id="batchFileList" style="margin-top:16px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
+            <div style="color: #d4d4d4;">Elaborazione 100% locale nel browser — nessun file lascia mai il tuo computer</div>
+        </div>
+    </div>
+
+    <script src="document-redaction-studio.js"></script>
+</body>
+</html>

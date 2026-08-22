@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Power Suite</title>
+
+    <!--
+        Security note: this is a single-purpose, offline-first tool (no server, no cookies/sessions,
+        no accounts). The main attack surface is untrusted PDF/CSV/XLSX files loaded by the user and
+        the CDN libraries below. Every value that comes out of a loaded file (filenames, form-field
+        names, CSV cell values, OCR text, extracted table cells) is written to the DOM with
+        textContent only, and DOM nodes are built with createElement/addEventListener — never
+        innerHTML or inline onclick strings built from file data. Filenames used for downloads or ZIP
+        entries are sanitized (path separators and control characters stripped) before use.
+        All JavaScript lives in separate same-origin files loaded via <script src>, so the CSP below
+        can use script-src 'self' plus the exact CDN origins we use, with no inline-script hash needed.
+        connect-src/worker-src include cdn.jsdelivr.net because Tesseract.js (OCR tab only) fetches its
+        worker, wasm core and language data from jsdelivr at OCR run time — this is the ONE feature in
+        this tool that needs the network beyond the initial page load; every other tab is 100% offline
+        once the page and its libraries have loaded. worker-src also allows 'blob:' because pdf.js and
+        Tesseract.js spin up their workers from blob URLs, and cdnjs.cloudflare.com because pdf.js's
+        worker script itself is fetched from there.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.sheetjs.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; base-uri 'none'; form-action 'none'">
+
+    <!-- pdf-lib: create/edit PDFs (merge, split, compress, watermark, bates, ocr text layer, forms) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <!-- pdf.js: render PDF pages to canvas + extract text (compress, ocr, diff, table extraction) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+    <!-- JSZip: package multi-file outputs (split, ocr fallback, mail merge, diff export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- SheetJS: read CSV/XLSX data files for mail merge -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <!-- jsdiff: word-level text diff between two PDF versions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.min.js"></script>
+    <!-- Tesseract.js: OCR engine, only fetched/used from the OCR tab -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+    <!-- Lucide icons, pinned version -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            min-height: 100vh;
+            color: #1a1a1a;
+        }
+
+        .app {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .header {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .subtitle { color: #737373; font-size: 15px; }
+
+        .shell {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .sidenav {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 8px;
+            position: sticky;
+            top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+            cursor: pointer;
+        }
+
+        .nav-btn:hover { background: #f5f5f5; }
+
+        .nav-btn.active { background: #eff6ff; color: #3b82f6; }
+
+        .nav-btn .lucide, .nav-btn svg { flex-shrink: 0; color: #737373; }
+        .nav-btn.active svg { color: #3b82f6; }
+
+        .panels { min-width: 0; }
+
+        .panel {
+            display: none;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel.active { display: block; }
+
+        .panel-header {
+            padding: 24px 28px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .panel-desc { color: #737373; font-size: 14px; }
+
+        .panel-body { padding: 24px 28px; }
+
+        .notice {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .notice.info {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        .notice svg { flex-shrink: 0; margin-top: 1px; }
+
+        .upload-area {
+            border: 2px dashed #d4d4d4;
+            border-radius: 8px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .upload-area:hover { border-color: #3b82f6; background: #f0f9ff; }
+        .upload-area.dragover { border-color: #3b82f6; background: #dbeafe; border-style: solid; }
+
+        .upload-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e5e5e5;
+            margin-bottom: 12px;
+        }
+
+        .upload-text { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+        .upload-hint { font-size: 13px; color: #737373; }
+
+        input[type="file"] { display: none; }
+
+        .field-row { margin-top: 18px; }
+        .field-row label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #1a1a1a; }
+        .field-hint { font-size: 12px; color: #737373; margin-top: 4px; }
+
+        .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 18px; }
+
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #d4d4d4;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            color: #1a1a1a;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        input[type="range"] { width: 100%; accent-color: #3b82f6; }
+
+        .range-value { font-size: 12px; color: #737373; font-family: 'SF Mono', Monaco, monospace; }
+
+        .checkbox-row { display: flex; align-items: center; gap: 8px; }
+        .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #3b82f6; }
+        .checkbox-row label { margin: 0; font-size: 13px; font-weight: 500; }
+
+        .actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 11px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn:hover { background: #2563eb; }
+        .btn:disabled { background: #e5e5e5; color: #a3a3a3; cursor: not-allowed; }
+
+        .btn-secondary { background: white; color: #1a1a1a; border: 1px solid #e5e5e5; }
+        .btn-secondary:hover { background: #fafafa; border-color: #d4d4d4; }
+
+        .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #1a1a1a;
+        }
+        .btn-icon:hover { background: #fafafa; border-color: #d4d4d4; }
+        .btn-icon:disabled { color: #d4d4d4; cursor: not-allowed; }
+
+        .file-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+
+        .file-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .file-row .file-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-row .file-meta { font-size: 12px; color: #737373; }
+        .file-row .file-controls { display: flex; gap: 4px; }
+
+        .progress-container { display: none; margin-top: 20px; }
+        .progress-bar { width: 100%; height: 8px; background: #f5f5f5; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+        .progress-fill { height: 100%; background: #3b82f6; width: 0%; border-radius: 4px; transition: width 0.2s ease; }
+        .progress-text { font-size: 13px; color: #737373; text-align: center; }
+
+        .alert { padding: 14px 16px; border-radius: 8px; margin-top: 18px; font-size: 13px; display: none; align-items: flex-start; gap: 10px; }
+        .alert.show { display: flex; }
+        .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .alert svg { flex-shrink: 0; margin-top: 1px; }
+
+        table.data-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+        table.data-table th, table.data-table td {
+            border: 1px solid #e5e5e5;
+            padding: 6px 8px;
+            text-align: left;
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        table.data-table th { background: #fafafa; font-weight: 600; }
+
+        .table-scroll { overflow-x: auto; border: 1px solid #e5e5e5; border-radius: 8px; margin-top: 16px; }
+
+        .diff-page { border: 1px solid #e5e5e5; border-radius: 8px; margin-top: 16px; overflow: hidden; }
+        .diff-page-head { background: #fafafa; padding: 10px 14px; font-size: 13px; font-weight: 600; border-bottom: 1px solid #e5e5e5; }
+        .diff-page-body { padding: 14px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+        .diff-add { background: #dcfce7; color: #15803d; text-decoration: none; }
+        .diff-del { background: #fee2e2; color: #b91c1c; text-decoration: line-through; }
+
+        .canvas-pair { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+        .canvas-pair figure { margin: 0; }
+        .canvas-pair figcaption { font-size: 12px; color: #737373; margin-bottom: 6px; }
+        .canvas-pair canvas { max-width: 100%; border: 1px solid #e5e5e5; border-radius: 6px; }
+
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #f5f5f5; color: #525252; }
+        .pill.warn { background: #fef3c7; color: #92400e; }
+        .pill.ok { background: #dcfce7; color: #15803d; }
+
+        .step-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+        .step-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .step-row .step-index {
+            width: 22px; height: 22px; border-radius: 999px; background: #3b82f6; color: white;
+            font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .step-row .step-label { flex: 1; font-size: 13px; font-weight: 500; }
+        .step-row .step-detail { font-size: 12px; color: #737373; }
+
+        details.field-config { margin-top: 8px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; background: #fafafa; }
+        details.field-config summary { cursor: pointer; font-size: 13px; font-weight: 500; }
+
+        .footer-note { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #a3a3a3; text-align: center; }
+
+        @media (max-width: 780px) {
+            .shell { grid-template-columns: 1fr; }
+            .sidenav { position: static; flex-direction: row; overflow-x: auto; }
+            .nav-btn { white-space: nowrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1><i data-lucide="file-stack" style="color:#3b82f6;"></i> PDF Power Suite</h1>
+            <p class="subtitle">Merge, split, compress, watermark, OCR, diff, extract and mail-merge PDFs — entirely in your browser, nothing uploaded to a server.</p>
+        </div>
+
+        <div class="shell">
+            <nav class="sidenav" id="sidenav">
+                <button class="nav-btn active" data-tab="merge"><i data-lucide="combine"></i> Merge</button>
+                <button class="nav-btn" data-tab="split"><i data-lucide="scissors"></i> Split</button>
+                <button class="nav-btn" data-tab="compress"><i data-lucide="minimize-2"></i> Compress</button>
+                <button class="nav-btn" data-tab="watermark"><i data-lucide="stamp"></i> Watermark &amp; Bates</button>
+                <button class="nav-btn" data-tab="ocr"><i data-lucide="scan-text"></i> OCR</button>
+                <button class="nav-btn" data-tab="diff"><i data-lucide="git-compare"></i> Diff</button>
+                <button class="nav-btn" data-tab="table"><i data-lucide="table"></i> Table Extraction</button>
+                <button class="nav-btn" data-tab="mailmerge"><i data-lucide="mail-plus"></i> Mail Merge</button>
+                <button class="nav-btn" data-tab="pipeline"><i data-lucide="workflow"></i> Pipeline</button>
+            </nav>
+
+            <div class="panels">
+                <!-- ============ MERGE ============ -->
+                <section class="panel active" id="panel-merge">
+                    <div class="panel-header">
+                        <h2><i data-lucide="combine" style="color:#3b82f6;"></i> Merge PDFs</h2>
+                        <p class="panel-desc">Combine multiple PDFs into one, in the order you choose.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-area" id="merge-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop PDFs here or click to select</div>
+                            <div class="upload-hint">You can select multiple files at once</div>
+                            <input type="file" id="merge-file-input" accept="application/pdf,.pdf" multiple>
+                        </div>
+                        <div class="file-list" id="merge-file-list"></div>
+                        <div class="actions">
+                            <button class="btn" id="merge-run-btn" disabled><i data-lucide="play" size="16"></i> Merge &amp; Download</button>
+                            <button class="btn btn-secondary" id="merge-clear-btn"><i data-lucide="trash-2" size="16"></i> Clear</button>
+                        </div>
+                        <div class="progress-container" id="merge-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="merge-progress-fill"></div></div>
+                            <div class="progress-text" id="merge-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="merge-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="merge-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <!-- ============ SPLIT ============ -->
+                <section class="panel" id="panel-split">
+                    <div class="panel-header">
+                        <h2><i data-lucide="scissors" style="color:#3b82f6;"></i> Split a PDF</h2>
+                        <p class="panel-desc">Break one PDF into several, either one file per page or by custom page ranges.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-area" id="split-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop a PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="split-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="split-file-list"></div>
+                        <div class="field-row">
+                            <label>Split mode</label>
+                            <div class="checkbox-row" style="margin-bottom:8px;">
+                                <input type="radio" name="split-mode" id="split-mode-pages" value="pages" checked>
+                                <label for="split-mode-pages" style="font-weight:400;">One PDF per page</label>
+                            </div>
+                            <div class="checkbox-row">
+                                <input type="radio" name="split-mode" id="split-mode-ranges" value="ranges">
+                                <label for="split-mode-ranges" style="font-weight:400;">Custom page ranges</label>
+                            </div>
+                        </div>
+                        <div class="field-row" id="split-ranges-row" style="display:none;">
+                            <label for="split-ranges-input">Page ranges</label>
+                            <input type="text" id="split-ranges-input" placeholder="e.g. 1-3,4,7-9">
+                            <div class="field-hint">Comma-separated. Each range or single page becomes one output file, e.g. "1-3,4,7-9" makes 3 files.</div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="split-run-btn" disabled><i data-lucide="play" size="16"></i> Split &amp; Download ZIP</button>
+                        </div>
+                        <div class="progress-container" id="split-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="split-progress-fill"></div></div>
+                            <div class="progress-text" id="split-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="split-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="split-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <!-- ============ COMPRESS ============ -->
+                <section class="panel" id="panel-compress">
+                    <div class="panel-header">
+                        <h2><i data-lucide="minimize-2" style="color:#3b82f6;"></i> Compress a PDF</h2>
+                        <p class="panel-desc">Rasterize each page and re-encode it as JPEG to shrink file size.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="notice">
+                            <i data-lucide="alert-triangle" size="18"></i>
+                            <span>This trades text-selectability for a smaller file: every page becomes a flat image, so text can no longer be selected, searched or copied in the output. Use this for scans or when only the visual appearance matters, not for text-heavy documents you still need to search.</span>
+                        </div>
+                        <div class="upload-area" id="compress-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop a PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="compress-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="compress-file-list"></div>
+                        <div class="field-grid">
+                            <div class="field-row" style="margin-top:0;">
+                                <label>Rasterize DPI: <span class="range-value" id="compress-dpi-value">150</span></label>
+                                <input type="range" id="compress-dpi" min="72" max="300" step="1" value="150">
+                            </div>
+                            <div class="field-row" style="margin-top:0;">
+                                <label>JPEG quality: <span class="range-value" id="compress-quality-value">0.75</span></label>
+                                <input type="range" id="compress-quality" min="0.05" max="1" step="0.05" value="0.75">
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="compress-run-btn" disabled><i data-lucide="play" size="16"></i> Compress &amp; Download</button>
+                        </div>
+                        <div class="progress-container" id="compress-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="compress-progress-fill"></div></div>
+                            <div class="progress-text" id="compress-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="compress-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="compress-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <!-- ============ WATERMARK & BATES ============ -->
+                <section class="panel" id="panel-watermark">
+                    <div class="panel-header">
+                        <h2><i data-lucide="stamp" style="color:#3b82f6;"></i> Watermark &amp; Bates Numbering</h2>
+                        <p class="panel-desc">Stamp a text watermark and/or sequential Bates numbers onto every page.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-area" id="watermark-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop a PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="watermark-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="watermark-file-list"></div>
+
+                        <details class="field-config" open>
+                            <summary>Watermark</summary>
+                            <div class="checkbox-row" style="margin-top:10px;">
+                                <input type="checkbox" id="wm-enable" checked>
+                                <label for="wm-enable">Enable watermark</label>
+                            </div>
+                            <div class="field-grid">
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="wm-text">Text</label>
+                                    <input type="text" id="wm-text" value="CONFIDENTIAL" maxlength="200">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label>Rotation: <span class="range-value" id="wm-rotation-value">45</span>°</label>
+                                    <input type="range" id="wm-rotation" min="-180" max="180" step="1" value="45">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label>Opacity: <span class="range-value" id="wm-opacity-value">0.25</span></label>
+                                    <input type="range" id="wm-opacity" min="0.05" max="1" step="0.05" value="0.25">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label>Font size: <span class="range-value" id="wm-fontsize-value">48</span>pt</label>
+                                    <input type="range" id="wm-fontsize" min="8" max="120" step="1" value="48">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="wm-position">Position</label>
+                                    <select id="wm-position">
+                                        <option value="center" selected>Center</option>
+                                        <option value="top-left">Top left</option>
+                                        <option value="top-right">Top right</option>
+                                        <option value="bottom-left">Bottom left</option>
+                                        <option value="bottom-right">Bottom right</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </details>
+
+                        <details class="field-config">
+                            <summary>Bates numbering</summary>
+                            <div class="checkbox-row" style="margin-top:10px;">
+                                <input type="checkbox" id="bates-enable">
+                                <label for="bates-enable">Enable Bates numbering</label>
+                            </div>
+                            <div class="field-grid">
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="bates-prefix">Prefix</label>
+                                    <input type="text" id="bates-prefix" value="DOC" maxlength="40">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="bates-suffix">Suffix</label>
+                                    <input type="text" id="bates-suffix" value="" maxlength="40">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="bates-start">Starting number</label>
+                                    <input type="number" id="bates-start" value="1" min="0" max="9999999" step="1">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="bates-digits">Digit padding</label>
+                                    <input type="number" id="bates-digits" value="6" min="1" max="10" step="1">
+                                </div>
+                                <div class="field-row" style="margin-top:0;">
+                                    <label for="bates-position">Position</label>
+                                    <select id="bates-position">
+                                        <option value="bottom-right" selected>Bottom right</option>
+                                        <option value="bottom-left">Bottom left</option>
+                                        <option value="top-right">Top right</option>
+                                        <option value="top-left">Top left</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="actions">
+                            <button class="btn" id="watermark-run-btn" disabled><i data-lucide="play" size="16"></i> Apply &amp; Download</button>
+                        </div>
+                        <div class="progress-container" id="watermark-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="watermark-progress-fill"></div></div>
+                            <div class="progress-text" id="watermark-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="watermark-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="watermark-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <!-- ============ OCR ============ -->
+                <section class="panel" id="panel-ocr">
+                    <div class="panel-header">
+                        <h2><i data-lucide="scan-text" style="color:#3b82f6;"></i> OCR → Searchable PDF</h2>
+                        <p class="panel-desc">Recognize text in a scanned/image PDF and embed it as an invisible, selectable text layer.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="notice">
+                            <i data-lucide="wifi" size="18"></i>
+                            <span><strong>This is the one feature in PDF Power Suite that needs the internet beyond the initial page load.</strong> Recognizing text runs the Tesseract.js OCR engine, which downloads its worker script, WASM core and language data (roughly 10&ndash;15&nbsp;MB per language, cached by the browser afterwards) from a CDN the first time you run it. Every other tab in this tool works fully offline once the page has loaded.</span>
+                        </div>
+                        <div class="notice info">
+                            <i data-lucide="info" size="18"></i>
+                            <span>Output: the recognized words are drawn back onto each page as real, selectable/searchable PDF text with <code>opacity: 0</code> — visually the page looks exactly like the original scan, but you can now select, copy and search its text. Word position and size are matched to Tesseract's bounding boxes; very small or rotated text may end up only approximately aligned, since the goal is searchability, not pixel-perfect invisible glyph placement.</span>
+                        </div>
+                        <div class="upload-area" id="ocr-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop a scanned PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="ocr-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="ocr-file-list"></div>
+                        <div class="field-grid">
+                            <div class="field-row" style="margin-top:0;">
+                                <label>Language(s)</label>
+                                <div class="checkbox-row" style="margin-bottom:6px;">
+                                    <input type="checkbox" id="ocr-lang-eng" checked>
+                                    <label for="ocr-lang-eng" style="font-weight:400;">English</label>
+                                </div>
+                                <div class="checkbox-row">
+                                    <input type="checkbox" id="ocr-lang-ita">
+                                    <label for="ocr-lang-ita" style="font-weight:400;">Italian</label>
+                                </div>
+                            </div>
+                            <div class="field-row" style="margin-top:0;">
+                                <label>Rasterize scale: <span class="range-value" id="ocr-scale-value">2.0</span>x</label>
+                                <input type="range" id="ocr-scale" min="1" max="3" step="0.5" value="2">
+                                <div class="field-hint">Higher improves OCR accuracy but is slower.</div>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="ocr-run-btn" disabled><i data-lucide="play" size="16"></i> Run OCR &amp; Download Searchable PDF</button>
+                        </div>
+                        <div class="progress-container" id="ocr-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="ocr-progress-fill"></div></div>
+                            <div class="progress-text" id="ocr-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="ocr-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="ocr-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <!-- ============ DIFF ============ -->
+                <section class="panel" id="panel-diff">
+                    <div class="panel-header">
+                        <h2><i data-lucide="git-compare" style="color:#3b82f6;"></i> Diff Two PDF Versions</h2>
+                        <p class="panel-desc">Compare a "before" and "after" PDF, word-by-word or pixel-by-pixel.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="field-grid">
+                            <div>
+                                <div class="upload-area" id="diff-upload-a">
+                                    <div class="upload-icon"><i data-lucide="file" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-text">PDF A (before)</div>
+                                    <div class="upload-hint">Click to select</div>
+                                    <input type="file" id="diff-file-input-a" accept="application/pdf,.pdf">
+                                </div>
+                                <div class="file-list" id="diff-file-list-a"></div>
+                            </div>
+                            <div>
+                                <div class="upload-area" id="diff-upload-b">
+                                    <div class="upload-icon"><i data-lucide="file" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-text">PDF B (after)</div>
+                                    <div class="upload-hint">Click to select</div>
+                                    <input type="file" id="diff-file-input-b" accept="application/pdf,.pdf">
+                                </div>
+                                <div class="file-list" id="diff-file-list-b"></div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <label>Diff mode</label>
+                            <div class="checkbox-row" style="margin-bottom:8px;">
+                                <input type="radio" name="diff-mode" id="diff-mode-text" value="text" checked>
+                                <label for="diff-mode-text" style="font-weight:400;">Text diff (word-level)</label>
+                            </div>
+                            <div class="checkbox-row">
+                                <input type="radio" name="diff-mode" id="diff-mode-visual" value="visual">
+                                <label for="diff-mode-visual" style="font-weight:400;">Visual diff (pixel heatmap)</label>
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="diff-run-btn" disabled><i data-lucide="play" size="16"></i> Compare</button>
+                        </div>
+                        <div class="progress-container" id="diff-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="diff-progress-fill"></div></div>
+                            <div class="progress-text" id="diff-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="diff-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="diff-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div id="diff-results"></div>
+                    </div>
+                </section>
+
+                <!-- ============ TABLE EXTRACTION ============ -->
+                <section class="panel" id="panel-table">
+                    <div class="panel-header">
+                        <h2><i data-lucide="table" style="color:#3b82f6;"></i> Table Extraction</h2>
+                        <p class="panel-desc">Heuristically detect a simple grid-like table and export it as CSV.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="notice">
+                            <i data-lucide="alert-triangle" size="18"></i>
+                            <span>This is a best-effort heuristic (clustering text by row/column position), not a full table-recognition model. It works well on simple grid-like tables with clear alignment and struggles with merged cells, multi-line cells or unusual layouts. Tune the sliders below and re-run if the first pass looks wrong.</span>
+                        </div>
+                        <div class="upload-area" id="table-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop a PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="table-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="table-file-list"></div>
+                        <div class="field-grid">
+                            <div class="field-row" style="margin-top:0;">
+                                <label for="table-page-range">Page range</label>
+                                <input type="text" id="table-page-range" placeholder="e.g. 1-3 (leave blank for all)">
+                            </div>
+                            <div class="field-row" style="margin-top:0;">
+                                <label>Row tolerance: <span class="range-value" id="table-row-tol-value">4</span>px</label>
+                                <input type="range" id="table-row-tol" min="1" max="20" step="1" value="4">
+                            </div>
+                            <div class="field-row" style="margin-top:0;">
+                                <label>Column gap threshold: <span class="range-value" id="table-col-gap-value">12</span>px</label>
+                                <input type="range" id="table-col-gap" min="3" max="60" step="1" value="12">
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="table-run-btn" disabled><i data-lucide="play" size="16"></i> Extract &amp; Preview</button>
+                            <button class="btn btn-secondary" id="table-download-btn" style="display:none;"><i data-lucide="download" size="16"></i> Download CSV</button>
+                        </div>
+                        <div class="alert alert-success" id="table-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="table-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div id="table-results"></div>
+                    </div>
+                </section>
+
+                <!-- ============ MAIL MERGE ============ -->
+                <section class="panel" id="panel-mailmerge">
+                    <div class="panel-header">
+                        <h2><i data-lucide="mail-plus" style="color:#3b82f6;"></i> Mail Merge (CSV → Filled PDF Forms)</h2>
+                        <p class="panel-desc">Fill one copy of a PDF form per row of a CSV/XLSX file, then download them all as a ZIP.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="field-grid">
+                            <div>
+                                <div class="upload-area" id="mm-upload-pdf">
+                                    <div class="upload-icon"><i data-lucide="file-text" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-text">PDF form (AcroForm)</div>
+                                    <div class="upload-hint">Click to select</div>
+                                    <input type="file" id="mm-file-input-pdf" accept="application/pdf,.pdf">
+                                </div>
+                                <div class="file-list" id="mm-file-list-pdf"></div>
+                            </div>
+                            <div>
+                                <div class="upload-area" id="mm-upload-data">
+                                    <div class="upload-icon"><i data-lucide="table-2" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-text">CSV or XLSX data</div>
+                                    <div class="upload-hint">One row = one output PDF</div>
+                                    <input type="file" id="mm-file-input-data" accept=".csv,.xlsx,.xls">
+                                </div>
+                                <div class="file-list" id="mm-file-list-data"></div>
+                            </div>
+                        </div>
+                        <div id="mm-field-report"></div>
+                        <div class="checkbox-row field-row">
+                            <input type="checkbox" id="mm-flatten">
+                            <label for="mm-flatten">Flatten filled forms (make fields non-editable in the output)</label>
+                        </div>
+                        <div class="field-row">
+                            <label for="mm-filename-col">Output filename column (optional)</label>
+                            <input type="text" id="mm-filename-col" placeholder="e.g. LastName — leave blank to auto-number">
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="mm-run-btn" disabled><i data-lucide="play" size="16"></i> Generate &amp; Download ZIP</button>
+                        </div>
+                        <div class="progress-container" id="mm-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="mm-progress-fill"></div></div>
+                            <div class="progress-text" id="mm-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="mm-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="mm-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div id="mm-skip-report"></div>
+                    </div>
+                </section>
+
+                <!-- ============ PIPELINE ============ -->
+                <section class="panel" id="panel-pipeline">
+                    <div class="panel-header">
+                        <h2><i data-lucide="workflow" style="color:#3b82f6;"></i> Pipeline Builder</h2>
+                        <p class="panel-desc">Chain operations together: each step's output PDF feeds the next step.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-area" id="pipeline-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-text">Drop the starting PDF here or click to select</div>
+                            <div class="upload-hint">This is the input to step 1</div>
+                            <input type="file" id="pipeline-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="pipeline-file-list"></div>
+
+                        <div class="field-row">
+                            <label>Recall a saved pipeline</label>
+                            <select id="pipeline-recall-select">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div class="field-grid">
+                            <div class="field-row" style="margin-top:0;">
+                                <label for="pipeline-add-select">Add a step</label>
+                                <select id="pipeline-add-select">
+                                    <option value="merge">Merge (append extra files)</option>
+                                    <option value="compress">Compress</option>
+                                    <option value="watermark">Watermark</option>
+                                    <option value="bates">Bates numbering</option>
+                                    <option value="ocr">OCR (searchable PDF)</option>
+                                </select>
+                            </div>
+                            <div class="field-row" style="margin-top:0; display:flex; align-items:flex-end;">
+                                <button class="btn btn-secondary" id="pipeline-add-btn" style="width:100%;"><i data-lucide="plus" size="16"></i> Add step</button>
+                            </div>
+                        </div>
+
+                        <div class="step-list" id="pipeline-step-list"></div>
+
+                        <div class="actions">
+                            <button class="btn" id="pipeline-run-btn" disabled><i data-lucide="play" size="16"></i> Run Pipeline &amp; Download</button>
+                            <button class="btn btn-secondary" id="pipeline-export-btn"><i data-lucide="download" size="16"></i> Export JSON</button>
+                            <button class="btn btn-secondary" id="pipeline-import-btn"><i data-lucide="upload" size="16"></i> Import JSON</button>
+                            <input type="file" id="pipeline-import-input" accept="application/json,.json" style="display:none;">
+                        </div>
+                        <div class="progress-container" id="pipeline-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="pipeline-progress-fill"></div></div>
+                            <div class="progress-text" id="pipeline-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" id="pipeline-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" id="pipeline-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <div class="footer-note">PDF Power Suite &middot; © 2026 Chiara Berti 13 &middot; MIT License &middot; all processing happens locally in your browser</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="pdf-power-suite.js"></script>
+    <script src="pdf-power-suite-diff.js"></script>
+    <script src="pdf-power-suite-table.js"></script>
+    <script src="pdf-power-suite-mailmerge.js"></script>
+    <script src="pdf-power-suite-ocr.js"></script>
+    <script src="pdf-power-suite-pipeline.js"></script>
+</body>
+</html>
