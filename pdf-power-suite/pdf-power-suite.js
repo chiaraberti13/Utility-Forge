@@ -10,8 +10,12 @@
  * the helpers defined here.
  */
 
-// pdf.js needs an explicit worker URL when not using ES modules.
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+// pdf.js needs an explicit worker URL when not using ES modules. Guarded: if the pdf.js CDN
+// script failed to load (offline first load, blocked host, etc), the rest of this file — and the
+// features that don't need pdf.js at all (merge, split, watermark/bates) — must still work.
+if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+}
 
 const PPS = {
     MAX_FILE_SIZE_BYTES: 100 * 1024 * 1024, // 100 MB per file

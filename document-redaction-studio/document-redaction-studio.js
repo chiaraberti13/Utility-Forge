@@ -22,7 +22,23 @@ const MAX_IMAGE_DIM = 4000;                 // lato massimo (px) per l'editor im
 const RENDER_SCALE = 150 / 72;              // ~150dpi (i PDF usano 72pt/pollice come unità base)
 
 // Versione fissata di pdf.js: il worker deve combaciare esattamente con la libreria caricata sopra.
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+// Il controllo di presenza (typeof) evita che un blocco di rete/firewall su UNA sola libreria CDN
+// (es. pdf.js) mandi in errore l'intero script e disattivi anche la modalità Immagine, che non
+// dipende da pdf.js: le modalità PDF/Batch mostreranno invece un messaggio d'errore chiaro (vedi
+// setupPdfMode/setupBatchMode) invece di un crash silenzioso.
+const PDFJS_AVAILABLE = typeof pdfjsLib !== 'undefined';
+const PDFLIB_AVAILABLE = typeof PDFLib !== 'undefined';
+if (PDFJS_AVAILABLE) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+}
+
+// Richiama lucide.createIcons() solo se la libreria si è caricata: se il CDN di Lucide non è
+// raggiungibile l'app deve continuare a funzionare (senza icone) invece di bloccarsi.
+function safeCreateIcons() {
+    try {
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (e) { /* ignore: le icone sono puramente decorative */ }
+}
 
 // ---------------------------------------------------------------------------------------------
 // Utility generiche
@@ -353,7 +369,7 @@ async function handleImageFile(file) {
         hideAlertBox($('imgSuccessAlert'));
         redrawImgOverlay(null);
         updateImgBoxCount();
-        lucide.createIcons();
+        safeCreateIcons();
     } catch (err) {
         showAlertBox($('imgErrorAlert'), err.message);
     }
@@ -521,6 +537,11 @@ function resetPdfEditor() {
 async function handlePdfFileForEditing(file) {
     resetPdfEditor();
 
+    if (!PDFJS_AVAILABLE || !PDFLIB_AVAILABLE) {
+        showAlertBox($('pdfErrorAlert'), 'Le librerie pdf.js/pdf-lib non si sono caricate dal CDN (controlla la connessione e ricarica la pagina): la modalità PDF non può funzionare senza di esse.');
+        return;
+    }
+
     const looksLikePdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     if (!looksLikePdf) {
         showAlertBox($('pdfErrorAlert'), 'Il file selezionato non sembra un PDF.');
@@ -604,7 +625,7 @@ async function handlePdfFileForEditing(file) {
         progress.style.display = 'none';
         $('pdfEditorCard').classList.remove('hidden');
         updatePdfCounts();
-        lucide.createIcons();
+        safeCreateIcons();
     } catch (err) {
         progress.style.display = 'none';
         showAlertBox($('pdfErrorAlert'), `Errore nel caricamento del PDF: ${err.message}`);
@@ -735,7 +756,7 @@ function showVerifyResult(el, totalChars, pageCount) {
         span.textContent = `ATTENZIONE — verifica fallita: ${totalChars} caratteri di testo risultano ancora estraibili dal PDF redatto (su ${pageCount} pagine). Non usare questo file.`;
     }
     el.appendChild(span);
-    lucide.createIcons();
+    safeCreateIcons();
 }
 
 function setupPdfMode() {
@@ -865,7 +886,7 @@ function createBatchRow(name) {
             statusEl.textContent = `${result.pageCount} pagine · ${result.detectedCount} rilevati · ${appliedText} · ${verifyText}`;
             dlBtn.classList.remove('hidden');
             dlBtn.addEventListener('click', () => downloadBlob(result.blob, downloadName));
-            lucide.createIcons();
+            safeCreateIcons();
         },
         setError(msg) {
             statusEl.textContent = `Errore: ${msg}`;
@@ -881,7 +902,7 @@ function renderBatchFileList() {
         const row = createBatchRow(f.name);
         list.appendChild(row.el);
     });
-    lucide.createIcons();
+    safeCreateIcons();
 }
 
 async function processBatchFile(file, opts) {
@@ -945,6 +966,10 @@ async function processBatchFile(file, opts) {
 
 function setupBatchMode() {
     setupUploadArea($('batchUploadArea'), $('batchFileInput'), (files) => {
+        if (!PDFJS_AVAILABLE || !PDFLIB_AVAILABLE) {
+            showAlertBox($('batchErrorAlert'), 'Le librerie pdf.js/pdf-lib non si sono caricate dal CDN (controlla la connessione e ricarica la pagina): la modalità Batch non può funzionare senza di esse.');
+            return;
+        }
         const errors = [];
         files.forEach((f) => {
             const looksLikePdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
@@ -987,7 +1012,7 @@ function setupBatchMode() {
             list.appendChild(row.el);
             return row;
         });
-        lucide.createIcons();
+        safeCreateIcons();
 
         for (let i = 0; i < batchFiles.length; i++) {
             const file = batchFiles[i];
@@ -1010,8 +1035,11 @@ function setupBatchMode() {
 // Bootstrap
 // ---------------------------------------------------------------------------------------------
 
-lucide.createIcons();
-setupTabs();
-setupImageMode();
-setupPdfMode();
-setupBatchMode();
+// Ogni funzione di setup è isolata in un proprio try/catch: un problema in una modalità non deve
+// impedire l'inizializzazione delle altre (es. tab, drag&drop di base restano utilizzabili anche
+// se una libreria CDN specifica non si è caricata).
+safeCreateIcons();
+try { setupTabs(); } catch (e) { console.error('setupTabs failed:', e); }
+try { setupImageMode(); } catch (e) { console.error('setupImageMode failed:', e); }
+try { setupPdfMode(); } catch (e) { console.error('setupPdfMode failed:', e); }
+try { setupBatchMode(); } catch (e) { console.error('setupBatchMode failed:', e); }
