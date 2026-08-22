@@ -16,7 +16,7 @@ leaving your browser or your own server.
   <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub stars"></a>
   <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub forks"></a>
   <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Open issues"></a>
-  <img src="https://img.shields.io/badge/tools-2-blue?style=for-the-badge" alt="2 tools">
+  <img src="https://img.shields.io/badge/tools-6-blue?style=for-the-badge" alt="6 tools">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="License"></a>
 </p>
 
@@ -61,16 +61,25 @@ The tools share a philosophy, not a stack:
 |---|---|---|---|---|---|
 | 📦 **EPS Barcode Generator** | Generates EAN-13 barcodes in vector EPS format straight from an Excel/CSV list — bulk, with ZIP download. | Single-file HTML/JS | Browser only | [`barcode-eps-wizard/`](barcode-eps-wizard) | [README](barcode-eps-wizard/README.md) |
 | 🖼️ **PHP Image Converter** | Converts images between JPG/PNG/WEBP/BMP/TIFF/GIF/HEIC, with resize, crop presets and batch ZIP export, via a web UI. | Single-file PHP + GD/ImageMagick | Your own server | [`php-image-converter/`](php-image-converter) | [README](php-image-converter/README.md) |
+| 🕵️ **Privacy & Metadata Forensics Studio** | Inspects and selectively scrubs hidden metadata (EXIF/GPS, IPTC/XMP, PDF info fields and embedded-JS/attachment flags, Office tracked changes/comments/author fields) from images, PDFs and Office documents — batch mode, named profiles, exportable audit report. | HTML/JS (self-contained folder) | Browser only | [`privacy-metadata-scrubber/`](privacy-metadata-scrubber) | [README](privacy-metadata-scrubber/README.md) |
+| ✂️ **Document Redaction & Sanitization Studio** | Real redaction, not a cosmetic black box: auto-detects PII (emails, IBANs, phone numbers, codice fiscale) for review, then rasterizes every page so no text remains extractable — and proves it by re-extracting text from the result. Also does true pixel-level image redaction. | HTML/JS (self-contained folder) | Browser only | [`document-redaction-studio/`](document-redaction-studio) | [README](document-redaction-studio/README.md) |
+| 📚 **PDF Power Suite** | Merge, split, compress, watermark/Bates-number, OCR to searchable PDF, diff two versions (text + visual), extract tables to CSV, mail-merge a CSV into filled PDF forms — plus a chainable pipeline builder to run several of these in sequence. | HTML/JS (self-contained folder) | Browser only | [`pdf-power-suite/`](pdf-power-suite) | [README](pdf-power-suite/README.md) |
+| 🗂️ **Batch Renamer & File Organizer Pro** | Renames files inside a real local folder in place — driven by an Excel/CSV name mapping or a placeholder template, with a mandatory preview (collision/invalid-character checks) and a downloadable rollback log. | HTML/JS (self-contained folder) | Browser only, Chromium-based (File System Access API) | [`batch-renamer-pro/`](batch-renamer-pro) | [README](batch-renamer-pro/README.md) |
 
 Each folder is self-contained: open `barcode-eps-wizard/barcode-eps-wizard.html` directly
 in a browser, or drop `php-image-converter/php-image-converter.php` on a PHP server —
-nothing outside its own folder is required to run it. See each folder's own README for
-full setup and usage instructions.
+nothing outside its own folder is required to run it. The four newer tools ship their
+JavaScript as a plain sibling `.js` file instead of inlining it (so their
+Content-Security-Policy needs no inline-script hash), but they're just as self-contained:
+open the `.html` file and everything it needs is next to it. See each folder's own README
+for full setup and usage instructions.
 
-Both tools have been hardened against the injection/XSS/upload-abuse classes of bugs that
-this kind of "paste your data in, get a file out" tool is typically exposed to (strict
-input validation, CSRF protection, a Content-Security-Policy, sanitized filenames, size
-limits — see each folder's own README for the specifics that apply to it).
+All six tools have been hardened against the injection/XSS/upload-abuse classes of bugs
+that this kind of "give it your data, get a file back" tool is typically exposed to
+(strict input validation, a Content-Security-Policy, sanitized filenames, size/count
+limits, `textContent`-only DOM rendering — see each folder's own README for the specifics
+that apply to it, including the honest limits of what each tool's hardening can and can't
+guarantee).
 
 ## Licence
 
