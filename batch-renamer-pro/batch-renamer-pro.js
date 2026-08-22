@@ -360,6 +360,8 @@ function initDom() {
         previewBody: qs('previewBody'),
         previewSummary: qs('previewSummary'),
         confirmRunBtn: qs('confirmRunBtn'),
+        fuzzyConfirmRow: qs('fuzzyConfirmRow'),
+        confirmFuzzyToggle: qs('confirmFuzzyToggle'),
 
         progressContainer: qs('progressContainer'),
         progressFill: qs('progressFill'),
@@ -771,10 +773,17 @@ function renderPreview() {
 
     dom.previewSection.style.display = 'block';
     // Fuzzy matches require explicit confirmation before the run can proceed.
+    dom.confirmFuzzyToggle.checked = false;
+    dom.fuzzyConfirmRow.style.display = fuzzyCount > 0 ? 'flex' : 'none';
     dom.confirmRunBtn.disabled = fuzzyCount > 0;
     if (fuzzyCount > 0) {
-        showAlert('info', `${fuzzyCount} corrispondenza/e approssimata/e trovate: spunta "Conferma corrispondenze approssimate" per procedere.`, false);
+        showAlert('info', `${fuzzyCount} corrispondenza/e approssimata/e trovate: rivedi la tabella e spunta la casella per procedere.`, false);
     }
+}
+
+function onFuzzyConfirmToggle() {
+    const fuzzyCount = state.previewEntries.filter((e) => e.matchType === 'fuzzy').length;
+    dom.confirmRunBtn.disabled = fuzzyCount > 0 && !dom.confirmFuzzyToggle.checked;
 }
 
 // ---------------------------------------------------------------------------
@@ -1019,6 +1028,7 @@ function wireEvents() {
 
     dom.buildPreviewBtn.addEventListener('click', buildPreview);
     dom.confirmRunBtn.addEventListener('click', executeRun);
+    dom.confirmFuzzyToggle.addEventListener('change', onFuzzyConfirmToggle);
     dom.undoLastBtn.addEventListener('click', () => undoRun(state.rollbackLog));
     dom.downloadLogBtn.addEventListener('click', downloadRollbackLog);
     dom.downloadReportBtn.addEventListener('click', downloadReport);
