@@ -2,14 +2,15 @@
 
 > 🇬🇧 **English** | 🇮🇹 [Italiano](README-IT.md)
 
-A single self-contained web app that bundles nine PDF operations — merge, split, compress,
-watermark & Bates numbering, OCR to searchable PDF, version diffing, table extraction, CSV mail
-merge into PDF forms, and a pipeline builder to chain them together — into one page. Everything
-runs client-side, in your own browser: your documents are never uploaded to a server. Most free
-online "merge/split PDF" tools stop there; PDF Power Suite goes further by bundling operations that
-are rarely both free *and* client-side in the same place — offline OCR, a real word-level and
-pixel-level diff between two PDF versions, mail-merge into fillable form fields, and heuristic
-table extraction — plus a way to chain any of them into a repeatable pipeline.
+A single self-contained web app that bundles eleven PDF operations — merge, split, page management,
+compress, PDF → images, watermark & Bates numbering, OCR to searchable PDF, version diffing, table
+extraction, CSV mail merge into PDF forms, and a pipeline builder to chain them together — into one
+page, with a light/dark theme toggle. Everything runs client-side, in your own browser: your
+documents are never uploaded to a server. Most free online "merge/split PDF" tools stop there; PDF
+Power Suite goes further by bundling operations that are rarely both free *and* client-side in the
+same place — offline OCR, a real word-level and pixel-level diff between two PDF versions,
+mail-merge into fillable form fields, and heuristic table extraction — plus a way to chain any of
+them into a repeatable pipeline.
 
 ---
 
@@ -22,11 +23,13 @@ This package contains:
 - **`pdf-power-suite-table.js`** — the Table Extraction feature
 - **`pdf-power-suite-mailmerge.js`** — the Mail Merge feature
 - **`pdf-power-suite-ocr.js`** — the OCR feature
+- **`pdf-power-suite-pages.js`** — the Pagine (page management) feature
+- **`pdf-power-suite-images.js`** — the PDF → Immagini feature
 - **`pdf-power-suite-pipeline.js`** — the Pipeline Builder
 - **`LICENSE`** — MIT License
 - **`README.md`** / **`README-IT.md`** — this documentation (English / Italian)
 
-All six `.js` files must stay in the same folder as the `.html` file — the page loads them with
+All eight `.js` files must stay in the same folder as the `.html` file — the page loads them with
 plain relative `<script src="...">` tags.
 
 ---
@@ -57,7 +60,7 @@ Two ways to use it, both work equally well:
 1. **Double-click** `pdf-power-suite.html` (or open its URL, if hosted on a server).
 2. It opens in your default browser. Works with Chrome, Firefox, Safari, Edge (any modern,
    up-to-date browser).
-3. The left-hand navigation lists all nine operations as tabs; only one panel is shown at a time.
+3. The left-hand navigation lists all eleven operations as tabs; only one panel is shown at a time.
 
 💡 **Note:** the page loads seven small libraries from CDNs over the internet each time you open
 it, so you need a connection to load the page itself. After that, every tab except **OCR** never
@@ -65,7 +68,7 @@ touches the network again — see [Privacy & Security](#-privacy--security) belo
 breakdown.
 
 ✅ **How to tell it loaded correctly:** if the sidebar shows a colored icon next to each of the
-nine tab names, the libraries loaded fine. If icons are missing or a tab's "Run" button never
+eleven tab names, the libraries loaded fine. If icons are missing or a tab's "Run" button never
 enables after picking a file, check your connection and reload — see
 [Troubleshooting](#-troubleshooting).
 
@@ -148,15 +151,36 @@ Fill one copy of a PDF form per row of a spreadsheet.
 ### 9. Pipeline Builder
 Chain operations so each step's output feeds the next step's input.
 1. Upload the starting PDF.
-2. Pick a step type (**Merge**, **Compress**, **Watermark**, **Bates numbering**, or **OCR** — the
-   other four tabs aren't included because they aren't single-in/single-out transforms) and click
-   **Add step**; configure it inline, then add more steps and reorder them with ▲/▼.
+2. Pick a step type (**Merge**, **Compress**, **Watermark**, **Bates numbering**, or **OCR**) and
+   click **Add step**; configure it inline, then add more steps and reorder them with ▲/▼. Split
+   and PDF → Immagini aren't included because they produce multiple output files per run, Diff /
+   Table Extraction / Mail Merge take a second non-PDF input, and Pagine's interactive
+   drag/rotate/delete editing doesn't reduce to a scriptable step.
 3. Click **Run Pipeline & Download** to execute all steps in order with a progress indicator, or
    **Export JSON** to save the step list (settings only, not file contents) for later, or
    **Import JSON** to load one back in.
-4. The last 5 pipelines you ran or exported are kept in this browser's local storage and offered
-   in the **Recall a saved pipeline** dropdown for quick reuse. A recalled/imported Merge step
-   needs its extra files re-attached, since file contents aren't part of a saved definition.
+4. The **Cronologia** list shows your last 5 pipeline runs/exports — timestamp, step summary, and
+   input/output file counts — each with a one-click **Load** button to bring those settings back
+   into the step list. A loaded Merge step needs its extra files re-attached, since file contents
+   aren't part of a saved definition.
+
+### 10. Pagine (Page Management)
+Reorder, rotate, or delete individual pages of one PDF.
+1. Select a single PDF; a thumbnail grid of every page appears.
+2. **Drag** a page tile to move it to a new position.
+3. Use each tile's buttons to **rotate** that page 90° left/right (repeatable up to 270°) or
+   **delete** it.
+4. Click **Export & Download** to rebuild the PDF in the new order with the chosen rotations
+   applied, or **Reset order/rotation** to start over from the original file without re-uploading.
+
+### 11. PDF → Immagini
+Rasterize a page range and export each page as a standalone image (distinct from Compress, whose
+output is a smaller PDF, not image files).
+1. Select a single PDF and, optionally, a page range (blank = all pages).
+2. Choose **PNG** or **JPEG**, and set the **DPI** slider (and, for JPEG, the **quality** slider).
+3. Click **Rasterize** to render every selected page and preview it as a thumbnail.
+4. Download images **individually** from each thumbnail, or click **Download all as ZIP** for every
+   rasterized page at once.
 
 ---
 
@@ -175,12 +199,14 @@ fallback: recognized words are drawn back onto each page as ordinary PDF text at
 positioned at each word's bounding box and sized from its height, so the result looks identical to
 the scan but its text is selectable, copyable and findable with Ctrl/Cmd+F.
 
-One honest limitation: word glyphs are **not horizontally stretched** to match each bounding box's
-exact width (doing that losslessly needs hand-rolled low-level PDF content-stream operators, which
-was judged not worth the fragility for an invisible layer). This means the invisible selection box
-under a word is only approximately — not pixel-perfectly — aligned with the visible word beneath
-it. Search and "select all" still work correctly, since those only depend on the text content and
-its reading order, not on exact glyph geometry.
+**Since v1.1**, each word's glyphs are also horizontally scaled (via a standard PDF content-stream
+transformation matrix wrapped around the invisible text, anchored at the word's left edge) so the
+invisible run's width matches its Tesseract bounding box, not just its position and height. This
+was verified with a write/read round trip (built with pdf-lib, read back with pdf.js) confirming
+the extracted text run's width matches exactly. The remaining honest limitation: rotated text and
+badly mis-recognized words can still end up only approximately aligned. Search and "select all"
+were already fully correct in v1.0 either way, since those only depend on text content and reading
+order, never on exact glyph geometry.
 
 ### Table extraction
 The row/column detection is a **heuristic**, clustering text runs by Y-coordinate into rows and
@@ -201,19 +227,26 @@ heatmap will show much of the page as "different" simply from the scaling.
 ## 🎯 FEATURES
 
 ✅ **No installation** — just open the HTML file
-✅ **Nine PDF operations in one page** — merge, split, compress, watermark & Bates, OCR, diff,
-table extraction, mail merge, pipeline builder
+✅ **Eleven PDF operations in one page** — merge, split, page management, compress, PDF → images,
+watermark & Bates, OCR, diff, table extraction, mail merge, pipeline builder
 ✅ **Offline after first load**, except OCR (see Privacy & Security)
 ✅ **Multi-platform** — Windows, Mac, Linux, Android, iOS
-✅ **Real searchable-PDF OCR output** — invisible text layer, not just a .txt export
+✅ **Real searchable-PDF OCR output** — invisible text layer with glyph-width–matched positioning,
+not just a .txt export
 ✅ **Word-level and pixel-level PDF diffing** in one tool
+✅ **Drag-to-reorder page management** — rotate and delete pages in a visual thumbnail grid
 ✅ **CSV/XLSX mail merge into real AcroForm fields**, with a skip report and optional flattening
-✅ **Pipeline builder** with JSON export/import and a 5-item recent-pipelines recall
-✅ **ZIP download** for every multi-file output (split, mail merge)
+✅ **Pipeline builder** with JSON export/import and a visible, one-click-reload history of your
+last 5 runs/exports
+✅ **ZIP download** for every multi-file output (split, PDF → images, mail merge)
 ✅ **Drag & drop** on every upload area
+✅ **Light and dark themes** — follows your system preference by default, with a manual toggle that
+remembers your choice
 ✅ **Responsive design** — left-nav collapses to a horizontal scroller on narrow screens
+✅ **Keyboard-accessible** — visible focus rings, labeled controls, `aria-current` on the active tab
 ✅ **Vector icons** — Lucide Icons, pinned version
-✅ **Blue accent palette** — same visual language as the rest of this tool suite
+✅ **Blue accent palette** — same visual language as the rest of this tool suite, now driven by a
+shared set of CSS custom properties for both themes
 
 ---
 
@@ -337,13 +370,17 @@ page has finished loading.
 - **All JavaScript in external files** — every `.js` file is loaded via a plain
   `<script src="...">` tag (not inlined in the HTML), which is what lets the CSP above use a
   simple `script-src 'self' ...` instead of a fragile inline-script hash.
+- **`localStorage` stays on this device** — your light/dark theme choice and the Pipeline Builder's
+  last-5 run/export history (step types and settings only, never file contents) are saved in this
+  browser's `localStorage`, scoped to this page's own origin. Nothing in `localStorage` is ever
+  transmitted anywhere; it just lets those two small preferences survive a reload.
 
 ---
 
 ## 💾 SHARING
 
 You can share the entire folder with colleagues:
-1. Copy all files (the `.html`, all six `.js` files, `LICENSE`) to a USB drive or shared folder.
+1. Copy all files (the `.html`, all eight `.js` files, `LICENSE`) to a USB drive or shared folder.
 2. Or share via email/WeTransfer/Google Drive as a single ZIP of the folder.
 3. Recipients just need to open `pdf-power-suite.html` — the other files must stay alongside it.
 
@@ -352,6 +389,38 @@ You can share the entire folder with colleagues:
 ---
 
 ## 📝 CHANGELOG
+
+### Version 1.1 — Consistency, Dark Mode &amp; New Features
+- 🎨 **Design-system tokens shared across the whole Utility Forge suite** — every color in the page
+  now comes from a small set of CSS custom properties (`--uf-*`) instead of hardcoded hex values,
+  so this tool is now visually identical to the other five tools in the suite.
+- 🌗 **Light/dark theme toggle** — follows your OS preference by default; the toggle button in the
+  header remembers an explicit choice in `localStorage` and applies it before first paint (no
+  flash of the wrong theme). Rendered PDF page content itself is never recolored — only the UI
+  chrome around it switches themes.
+- 🆕 **New tab: Pagine (Page Management)** — reorder pages by dragging thumbnails, rotate
+  individual pages 90°/180°/270°, delete pages, and export the result — all on one PDF, no need to
+  route through Split + Merge for a simple reorder.
+- 🆕 **New tab: PDF → Immagini** — rasterize a page range and export PNG or JPEG images, one file
+  per page, downloadable individually or as a ZIP. Distinct from Compress, whose output stays a
+  (smaller) PDF rather than becoming image files.
+- 🎯 **More accurate OCR text alignment** — invisible OCR text is now horizontally scaled to match
+  each word's exact Tesseract bounding-box width (previously only position and height were
+  matched), so selection boxes track the visible word more closely. Verified with a write/read
+  round trip confirming the extracted text run's width matches exactly. See
+  [Technical limits → OCR outcome](#-technical-limits) for the remaining honest caveats.
+- 📜 **Visible Pipeline Builder history** — the last 5 runs/exports are now shown as a readable
+  list (timestamp, step summary, input/output file counts) with a one-click **Load** button,
+  instead of only a plain dropdown.
+- ♿ **Accessibility pass** — visible focus rings on every interactive element, `aria-label` on
+  every icon-only button, `<label for>` correctly paired with its input throughout, `aria-current`
+  on the active tab, and `role="status" aria-live="polite"` on success/error messages so screen
+  readers announce them.
+- ⏱️ Alert auto-hide timing standardized: success/info messages clear after 6s, error/warning
+  messages stay for 8s (previously errors never auto-hid).
+- 📱 Responsive breakpoint standardized to 680px to match the rest of the suite (the sidenav-to-top-nav
+  collapse keeps its own slightly wider 780px breakpoint, since 680px is too narrow for a
+  comfortable horizontal tab scroller).
 
 ### Version 1.0
 - 🎉 First release

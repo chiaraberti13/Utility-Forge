@@ -8,11 +8,11 @@
 
 ## 1. In una frase
 
-Un'applicazione web che riunisce nove operazioni professionali sui PDF — unire, dividere,
-comprimere, applicare filigrana e numerazione Bates, OCR verso testo ricercabile, confronto tra
-due versioni, estrazione tabelle, stampa unione da foglio di calcolo e una pipeline configurabile
-per concatenarle — interamente nel browser, senza installare nulla e senza inviare i documenti a
-un server.
+Un'applicazione web che riunisce undici operazioni professionali sui PDF — unire, dividere,
+gestire pagine, comprimere, esportare come immagini, applicare filigrana e numerazione Bates, OCR
+verso testo ricercabile, confronto tra due versioni, estrazione tabelle, stampa unione da foglio di
+calcolo e una pipeline configurabile per concatenarle — interamente nel browser, con tema
+chiaro/scuro, senza installare nulla e senza inviare i documenti a un server.
 
 ---
 
@@ -32,7 +32,7 @@ spesso a dover fare cose più complesse del semplice "unisci due PDF". I problem
   diversi.
 
 PDF Power Suite risolve tutti e tre i problemi in un'unica pagina web autonoma: **gratuita,
-completa e privata**. Tutte le nove operazioni — comprese quelle più avanzate — girano nel
+completa e privata**. Tutte le undici operazioni — comprese quelle più avanzate — girano nel
 browser dell'utente.
 
 ---
@@ -42,7 +42,8 @@ browser dell'utente.
 Dal punto di vista dell'utente il flusso è pensato per essere immediato:
 
 1. **Apre l'app** — doppio click sul file HTML: si apre nel browser come una normale pagina web,
-   con un menu laterale che elenca le nove operazioni disponibili.
+   con un menu laterale che elenca le undici operazioni disponibili e un selettore di tema
+   chiaro/scuro in alto.
 2. **Sceglie un'operazione** dal menu — ad esempio "Confronto" per confrontare due versioni di un
    contratto, oppure "Stampa Unione" per generare centinaia di lettere personalizzate da un CSV.
 3. **Carica i file richiesti** (uno o più PDF, e per alcune funzioni anche un CSV/XLSX) trascinandoli
@@ -62,12 +63,14 @@ eseguirla con un solo click, e salvarne la definizione per riusarla in seguito.
 
 ### 4.1 Architettura: pagina unica, logica modulare, zero build
 
-L'applicazione è distribuita come una manciata di file statici (un `.html` più sei file `.js`)
+L'applicazione è distribuita come una manciata di file statici (un `.html` più otto file `.js`)
 senza alcun passaggio di compilazione: si apre e funziona. Rispetto a un singolo file monolitico,
 la logica JavaScript è stata divisa per dominio funzionale — un modulo centrale con le utilità
-condivise e le operazioni base (Unisci, Dividi, Comprimi, Filigrana/Bates), e moduli separati per
-Confronto, Estrazione Tabelle, Stampa Unione, OCR e Pipeline — per mantenere ogni file leggibile
-e testabile nonostante la quantità di funzionalità.
+condivise, il tema chiaro/scuro e le operazioni base (Unisci, Dividi, Comprimi, Filigrana/Bates), e
+moduli separati per Confronto, Estrazione Tabelle, Stampa Unione, OCR, Gestione Pagine, PDF →
+Immagini e Pipeline — per mantenere ogni file leggibile e testabile nonostante la quantità di
+funzionalità. Tutte le pagine dell'applicazione condividono un unico insieme di variabili CSS per
+colori e tema, così l'aspetto resta coerente tra le undici schede e tra chiaro e scuro.
 
 Le librerie esterne, tutte caricate da CDN a **versione fissata** (mai `@latest`):
 
@@ -118,6 +121,17 @@ Alcuni esempi rappresentativi:
   corrispondente tramite le API testuali di pdf-lib; i campi senza corrispondenza vengono saltati
   e segnalati, mai causa di un'interruzione dell'intero processo.
 
+- **Gestione pagine**: ogni pagina viene renderizzata come miniatura con pdf.js; l'utente può
+  riordinarle trascinandole (drag & drop nativo HTML5), ruotarle o eliminarle, e all'esportazione
+  pdf-lib ricostruisce il documento con `copyPages()` nel nuovo ordine, sommando la rotazione
+  scelta a quella già presente su ciascuna pagina con `setRotation()`.
+
+- **Allineamento del testo OCR invisibile**: oltre a posizionare e dimensionare ogni parola secondo
+  il proprio riquadro di riconoscimento, il testo viene anche scalato orizzontalmente avvolgendolo
+  in operatori di basso livello dello stream di contenuto PDF (`pushGraphicsState` /
+  `concatTransformationMatrix` / `popGraphicsState`, esposti da pdf-lib), così la larghezza del
+  testo invisibile corrisponde esattamente al riquadro individuato da Tesseract.
+
 ### 4.3 Attenzione alle prestazioni e alla robustezza
 
 - **Elaborazione a blocchi con pause asincrone**: ogni ciclo pagina-per-pagina cede periodicamente
@@ -137,7 +151,8 @@ esplicitamente sia nell'interfaccia sia nella documentazione: la funzione OCR sc
 il motore di riconoscimento e i dati della lingua scelta (non il contenuto del PDF, che resta
 sempre locale). Ogni altra funzione — comprese Confronto, Estrazione Tabelle e Stampa Unione, che
 maneggiano dati potenzialmente sensibili — non contatta mai alcun server dopo il caricamento
-iniziale della pagina.
+iniziale della pagina. L'unico uso di `localStorage` (preferenza di tema e cronologia delle
+pipeline) resta anch'esso isolato al browser dell'utente e non viene mai trasmesso.
 
 ---
 
@@ -149,9 +164,9 @@ finito e documentato. In concreto:
 - **Ho progettato l'architettura** dell'applicazione, scegliendo un approccio *multi-file
   client-side senza build* e una scomposizione della logica JavaScript per dominio funzionale, per
   bilanciare la portabilità (nessuna installazione) con la manutenibilità di un progetto che copre
-  nove funzionalità distinte.
+  undici funzionalità distinte.
 
-- **Ho implementato nove pipeline di elaborazione PDF indipendenti**, ciascuna con la propria
+- **Ho implementato undici pipeline di elaborazione PDF indipendenti**, ciascuna con la propria
   logica di lettura, trasformazione e ricostruzione del documento, integrando cinque librerie
   specializzate (pdf-lib, pdf.js, JSZip, SheetJS, jsdiff) e un motore OCR (Tesseract.js) in un
   'unica interfaccia coerente.
@@ -182,7 +197,13 @@ finito e documentato. In concreto:
 
 - **Ho testato l'applicazione end-to-end** generando documenti PDF di prova e verificando con test
   automatizzati (browser headless) che unione, divisione, filigrana/numerazione Bates, confronto,
-  estrazione tabelle, stampa unione, compressione e pipeline producessero l'output atteso.
+  estrazione tabelle, stampa unione, compressione, gestione pagine, esportazione immagini e
+  pipeline producessero l'output atteso.
+
+- **Ho introdotto un sistema di tema chiaro/scuro e un design system a variabili CSS condivise**
+  con il resto della suite Utility Forge, applicato retroattivamente a un'interfaccia già esistente
+  senza alterarne il comportamento, insieme a un passaggio di accessibilità (focus visibile,
+  etichette per screen reader, associazione corretta tra ogni campo e la propria etichetta).
 
 - **Ho documentato il progetto** in modo bilingue (italiano/inglese), con una guida d'uso
   suddivisa per singola funzionalità, limiti tecnici dichiarati con onestà (incluse le
@@ -199,7 +220,7 @@ finito e documentato. In concreto:
 | **Algoritmi**                 | Mappatura coordinate pixel→punti PDF, clustering spaziale per l'estrazione tabelle, diff testuale e visivo |
 | **Integrazione di librerie**  | Orchestrazione di sei librerie di terze parti (pdf-lib, pdf.js, JSZip, SheetJS, jsdiff, Tesseract.js) in un'unica applicazione coerente |
 | **Sicurezza**                 | Content-Security-Policy, prevenzione XSS, sanificazione input/nomi file        |
-| **UX / Product**              | Interfaccia a schede per nove funzionalità, feedback in tempo reale, gestione dei limiti |
+| **UX / Product**              | Interfaccia a schede per undici funzionalità, tema chiaro/scuro, accessibilità, feedback in tempo reale, gestione dei limiti |
 | **Testing**                   | Generazione di fixture di test, verifica automatizzata con browser headless    |
 | **Documentazione**            | Guida utente bilingue per-funzionalità, changelog, risoluzione problemi        |
 
@@ -207,14 +228,19 @@ finito e documentato. In concreto:
 
 ## 6. Caratteristiche principali in breve
 
-- **Nove operazioni PDF** in un'unica applicazione: unisci, dividi, comprimi, filigrana e Bates,
-  OCR, confronto, estrazione tabelle, stampa unione, pipeline
-- **OCR verso PDF realmente ricercabile**, non solo un'esportazione di testo semplice
+- **Undici operazioni PDF** in un'unica applicazione: unisci, dividi, gestisci pagine, comprimi,
+  esporta come immagini, filigrana e Bates, OCR, confronto, estrazione tabelle, stampa unione,
+  pipeline
+- **OCR verso PDF realmente ricercabile**, con testo invisibile allineato in posizione e larghezza
+  al riquadro riconosciuto — non solo un'esportazione di testo semplice
 - **Confronto a doppia modalità**: testuale a livello di parola e visivo a livello di pixel
-- **Generatore di pipeline** con salvataggio ed esportazione delle configurazioni
+- **Generatore di pipeline** con salvataggio, esportazione e cronologia visibile delle
+  configurazioni
+- **Tema chiaro/scuro** condiviso con il resto della suite, con selettore manuale persistente
 - **Nessuna installazione**, funziona **offline** (tranne l'OCR) e **multi-piattaforma**
 - **Privacy by design**, con l'unica eccezione di rete dichiarata con chiarezza
-- Interfaccia **responsive** con navigazione a schede e feedback in tempo reale su ogni operazione
+- Interfaccia **responsive e accessibile** con navigazione a schede e feedback in tempo reale su
+  ogni operazione
 
 ---
 

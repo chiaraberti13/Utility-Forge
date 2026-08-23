@@ -274,34 +274,75 @@ function loadRecents() {
     }
 }
 
-function saveToRecents(steps) {
+// `kind` records whether this entry was captured from a completed run or a JSON export, shown in
+// the visible history list so the user can tell them apart.
+function saveToRecents(steps, kind) {
     try {
         const serializable = steps.map((s) => ({ type: s.type, config: s.config }));
         if (serializable.length === 0) return;
+        // "File count" for the history list: the starting PDF plus any extra files a Merge step
+        // appends counts as input; the pipeline always produces exactly one output PDF.
+        const inputCount = 1 + steps.reduce((sum, s) => sum + (s.type === 'merge' && s.extraFiles ? s.extraFiles.length : 0), 0);
         let recents = loadRecents();
-        recents.unshift({ savedAt: new Date().toISOString(), steps: serializable });
+        recents.unshift({ savedAt: new Date().toISOString(), steps: serializable, inputCount, outputCount: 1, kind: kind || 'run' });
         recents = recents.slice(0, 5);
         localStorage.setItem(PIPELINE_RECENTS_KEY, JSON.stringify(recents));
-        populateRecentsDropdown();
+        renderPipelineHistory();
     } catch (e) {
         // localStorage unavailable (private browsing, quota, etc) — silently skip, not essential.
     }
 }
 
-function populateRecentsDropdown() {
-    const select = document.getElementById('pipeline-recall-select');
-    select.textContent = '';
-    const none = document.createElement('option');
-    none.value = ''; none.textContent = '— none —';
-    select.appendChild(none);
-    loadRecents().forEach((entry, idx) => {
-        const opt = document.createElement('option');
-        opt.value = String(idx);
+// Visible "Cronologia" list in the Pipeline tab: shows the last 5 saved pipeline definitions with
+// their timestamp, step summary, and input/output file counts, each with a one-click Load button —
+// this is in addition to (not a replacement for) the JSON export/import round trip.
+function renderPipelineHistory() {
+    const list = document.getElementById('pipeline-history-list');
+    const empty = document.getElementById('pipeline-history-empty');
+    list.textContent = '';
+    const recents = loadRecents();
+    empty.style.display = recents.length ? 'none' : 'block';
+
+    recents.forEach((entry, idx) => {
+        const row = document.createElement('div');
+        row.className = 'step-row';
+
+        const badge = document.createElement('div');
+        badge.className = 'step-index';
+        badge.textContent = String(idx + 1);
+        row.appendChild(badge);
+
+        const info = document.createElement('div');
+        info.style.flex = '1';
+        info.style.minWidth = '0';
+
+        const label = document.createElement('div');
+        label.className = 'step-label';
         const when = new Date(entry.savedAt).toLocaleString();
+        const kindLabel = entry.kind === 'export' ? 'Exported' : 'Ran';
+        label.textContent = `${kindLabel} ${when}`;
+        info.appendChild(label);
+
+        const detail = document.createElement('div');
+        detail.className = 'step-detail';
         const summary = entry.steps.map((s) => STEP_LABELS[s.type] || s.type).join(' → ');
-        opt.textContent = `${when} — ${summary}`;
-        select.appendChild(opt);
+        const counts = `${entry.inputCount} input file${entry.inputCount === 1 ? '' : 's'} → ${entry.outputCount} output file${entry.outputCount === 1 ? '' : 's'}`;
+        detail.textContent = `${summary} · ${counts}`;
+        info.appendChild(detail);
+
+        row.appendChild(info);
+
+        const loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.className = 'btn btn-secondary btn-small';
+        loadBtn.textContent = 'Load';
+        loadBtn.addEventListener('click', () => loadStepsFromDefinition(entry.steps));
+        row.appendChild(loadBtn);
+
+        list.appendChild(row);
     });
+
+    if (window.lucide) lucide.createIcons();
 }
 
 // ---- run / export / import -------------------------------------------------
@@ -348,7 +389,7 @@ async function runPipeline() {
         }
 
         PPS.downloadBytes(currentBytes, 'pipeline_output.pdf');
-        saveToRecents(pipelineState.steps);
+        saveToRecents(pipelineState.steps, 'run');
         PPS.showAlert('pipeline', 'success', `Pipeline complete: ran ${pipelineState.steps.length} step(s).`);
     } catch (err) {
         PPS.showAlert('pipeline', 'error', err.message);
@@ -366,7 +407,7 @@ function exportPipelineJson() {
     const def = { version: 1, steps: pipelineState.steps.map((s) => ({ type: s.type, config: s.config })) };
     const blob = new Blob([JSON.stringify(def, null, 2)], { type: 'application/json' });
     PPS.downloadBlob(blob, 'pdf-power-suite-pipeline.json');
-    saveToRecents(pipelineState.steps);
+    saveToRecents(pipelineState.steps, 'export');
 }
 
 function loadStepsFromDefinition(defSteps) {
@@ -434,15 +475,7 @@ function initPipeline() {
         importInput.value = '';
     });
 
-    document.getElementById('pipeline-recall-select').addEventListener('change', (e) => {
-        const idx = parseInt(e.target.value, 10);
-        if (Number.isNaN(idx)) return;
-        const recents = loadRecents();
-        const entry = recents[idx];
-        if (entry) loadStepsFromDefinition(entry.steps);
-    });
-
-    populateRecentsDropdown();
+    renderPipelineHistory();
     renderPipelineSteps();
 }
 
