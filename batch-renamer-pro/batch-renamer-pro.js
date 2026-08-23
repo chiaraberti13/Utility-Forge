@@ -380,18 +380,58 @@ function initDom() {
     };
 }
 
+const ALERT_ICONS = { success: 'check-circle', error: 'alert-circle', warning: 'alert-triangle', info: 'info' };
+
 function showAlert(type, message, autoHide = true) {
     if (!dom.alertBox) return;
     dom.alertBox.className = 'alert alert-' + type;
     dom.alertBox.style.display = 'flex';
     dom.alertText.textContent = message;
+    const icon = dom.alertBox.querySelector('i');
+    if (icon) icon.setAttribute('data-lucide', ALERT_ICONS[type] || 'info');
     refreshIcons();
+    clearTimeout(showAlert._t);
     if (autoHide) {
-        clearTimeout(showAlert._t);
+        const delay = (type === 'error' || type === 'warning') ? 8000 : 6000;
         showAlert._t = setTimeout(() => {
             dom.alertBox.style.display = 'none';
-        }, 6000);
+        }, delay);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Dark mode toggle
+// ---------------------------------------------------------------------------
+const THEME_KEY = 'uf-theme';
+
+function applyThemeIcon() {
+    const btn = qs('themeToggle');
+    if (!btn) return;
+    const saved = localStorage.getItem(THEME_KEY);
+    const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    btn.innerHTML = '';
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+    icon.setAttribute('size', '18');
+    btn.appendChild(icon);
+    refreshIcons();
+}
+
+function initThemeToggle() {
+    let saved = null;
+    try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* localStorage unavailable */ }
+    if (saved === 'dark' || saved === 'light') document.documentElement.setAttribute('data-theme', saved);
+    applyThemeIcon();
+    const btn = qs('themeToggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme')
+            || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
+        applyThemeIcon();
+    });
 }
 
 function refreshIcons() {
@@ -1046,6 +1086,7 @@ function wireEvents() {
 document.addEventListener('DOMContentLoaded', () => {
     initDom();
     refreshIcons();
+    initThemeToggle();
     const supported = checkSupport();
     if (supported) {
         wireEvents();
