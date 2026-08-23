@@ -15,7 +15,7 @@
         qui sotto limita gli script eseguibili alle tre origini CDN indicate più lo script inline
         di questa pagina (identificato tramite hash SHA-256).
     -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-hOikFKcI4EJwTiwUUM+61tnJYlSBwKaLKXQ1QcH5dFw=' https://cdn.sheetjs.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-sSkYZ8eyaIlzgPqamy9CBkyrDnQ5HEByODtoEyx6iks=' https://cdn.sheetjs.com https://cdnjs.cloudflare.com https://unpkg.com; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
 
     <!-- SheetJS per leggere Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -32,41 +32,83 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
+        :root {
+            --uf-bg:#fafafa; --uf-card-bg:#ffffff; --uf-border:#e5e5e5; --uf-text:#1a1a1a; --uf-text-muted:#737373;
+            --uf-accent:#3b82f6; --uf-accent-hover:#2563eb; --uf-accent-soft:#f0f9ff; --uf-accent-softer:#eff6ff; --uf-dragover-bg:#dbeafe;
+            --uf-success-bg:#f0fdf4; --uf-success-border:#bbf7d0; --uf-success-text:#166534;
+            --uf-error-bg:#fef2f2; --uf-error-border:#fecaca; --uf-error-text:#991b1b;
+            --uf-warning-bg:#fffbeb; --uf-warning-border:#fde68a; --uf-warning-text:#92400e;
+            --uf-info-bg:#eff6ff; --uf-info-border:#bfdbfe; --uf-info-text:#1e40af;
+            --uf-progress-track:#f5f5f5; --uf-upload-border:#d4d4d4;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+                --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+                --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+                --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+                --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+                --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+                --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+            }
+        }
+        :root[data-theme="dark"] {
+            --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+            --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+            --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+            --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+            --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+            --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+            --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--uf-accent); outline-offset: 2px;
+        }
+        .icon-btn { background:transparent; border:1px solid var(--uf-border); border-radius:8px; padding:8px; cursor:pointer; color:var(--uf-text-muted); display:inline-flex; align-items:center; justify-content:center; }
+        .icon-btn:hover { background:var(--uf-accent-soft); color:var(--uf-accent); border-color:var(--uf-accent); }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--uf-bg);
             min-height: 100vh;
             padding: 16px;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
-        
+
         .container {
             max-width: 800px;
             margin: 0 auto;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             overflow: hidden;
         }
-        
+
         .header {
             padding: 32px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--uf-border);
         }
-        
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
         h1 {
             font-size: 24px;
             font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 8px;
+            color: var(--uf-text);
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        
+
         .subtitle {
-            color: #737373;
+            color: var(--uf-text-muted);
             font-size: 15px;
             font-weight: 400;
         }
@@ -76,66 +118,67 @@
         }
         
         .upload-area {
-            border: 2px dashed #d4d4d4;
+            border: 2px dashed var(--uf-upload-border);
             border-radius: 8px;
             padding: 48px 24px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
-        
+
         .upload-area:hover {
-            border-color: #3b82f6;
-            background: #f0f9ff;
+            border-color: var(--uf-accent);
+            background: var(--uf-accent-soft);
         }
-        
+
         .upload-area.dragover {
-            border-color: #3b82f6;
-            background: #dbeafe;
+            border-color: var(--uf-accent);
+            background: var(--uf-dragover-bg);
             border-style: solid;
         }
-        
+
         .upload-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 64px;
             height: 64px;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             margin-bottom: 16px;
         }
-        
+
         .upload-text {
+            display: block;
             font-size: 16px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 8px;
         }
-        
+
         .upload-hint {
             font-size: 14px;
-            color: #737373;
+            color: var(--uf-text-muted);
         }
-        
+
         #fileInput {
             display: none;
         }
-        
+
         .actions {
             display: flex;
             gap: 12px;
             margin-top: 24px;
             flex-wrap: wrap;
         }
-        
+
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #3b82f6;
+            background: var(--uf-accent);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -146,150 +189,150 @@
             transition: all 0.2s ease;
             white-space: nowrap;
         }
-        
+
         .btn:hover {
-            background: #2563eb;
+            background: var(--uf-accent-hover);
         }
-        
+
         .btn:active {
             transform: scale(0.98);
         }
-        
+
         .btn:disabled {
-            background: #e5e5e5;
-            color: #a3a3a3;
+            background: var(--uf-border);
+            color: var(--uf-text-muted);
             cursor: not-allowed;
         }
-        
+
         .btn-secondary {
-            background: white;
-            color: #1a1a1a;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
+            border: 1px solid var(--uf-border);
         }
-        
+
         .btn-secondary:hover {
-            background: #fafafa;
-            border-color: #d4d4d4;
+            background: var(--uf-bg);
+            border-color: var(--uf-upload-border);
         }
-        
+
         .progress-container {
             display: none;
             margin-top: 24px;
         }
-        
+
         .progress-bar {
             width: 100%;
             height: 8px;
-            background: #f5f5f5;
+            background: var(--uf-progress-track);
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 8px;
         }
-        
+
         .progress-fill {
             height: 100%;
-            background: #3b82f6;
+            background: var(--uf-accent);
             width: 0%;
             transition: width 0.3s ease;
             border-radius: 4px;
         }
-        
+
         .progress-text {
             font-size: 13px;
-            color: #737373;
+            color: var(--uf-text-muted);
             text-align: center;
         }
-        
+
         .stats {
             display: none;
             margin-top: 24px;
             padding: 20px;
-            background: #fafafa;
+            background: var(--uf-bg);
             border-radius: 8px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 24px;
         }
-        
+
         .stat-item {
             text-align: center;
         }
-        
+
         .stat-number {
             font-size: 28px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 4px;
         }
-        
+
         .stat-label {
             font-size: 13px;
-            color: #737373;
+            color: var(--uf-text-muted);
             font-weight: 400;
         }
-        
+
         .preview {
             display: none;
             margin-top: 24px;
             max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
-        
+
         .preview-item {
             display: flex;
             align-items: center;
             padding: 16px;
-            background: white;
-            border-bottom: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border-bottom: 1px solid var(--uf-border);
             transition: background 0.2s ease;
         }
-        
+
         .preview-item:last-child {
             border-bottom: none;
         }
-        
+
         .preview-item:hover {
-            background: #fafafa;
+            background: var(--uf-bg);
         }
-        
+
         .preview-status {
             margin-right: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        
+
         .preview-info {
             flex: 1;
             min-width: 0;
         }
-        
+
         .preview-code {
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 4px;
             font-size: 14px;
         }
-        
+
         .preview-number {
             font-size: 13px;
-            color: #737373;
+            color: var(--uf-text-muted);
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
         }
-        
+
         .preview-error {
-            color: #dc2626;
+            color: var(--uf-error-text);
             font-size: 12px;
             margin-top: 4px;
         }
-        
+
         .alert {
             padding: 16px;
             border-radius: 8px;
@@ -299,30 +342,30 @@
             align-items: center;
             gap: 12px;
         }
-        
+
         .alert-success {
-            background: #f0fdf4;
-            color: #15803d;
-            border: 1px solid #bbf7d0;
+            background: var(--uf-success-bg);
+            color: var(--uf-success-text);
+            border: 1px solid var(--uf-success-border);
         }
-        
+
         .alert-error {
-            background: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
+            background: var(--uf-error-bg);
+            color: var(--uf-error-text);
+            border: 1px solid var(--uf-error-border);
         }
-        
+
         .footer {
             padding: 24px 32px;
             text-align: center;
-            color: #a3a3a3;
+            color: var(--uf-text-muted);
             font-size: 13px;
-            border-top: 1px solid #e5e5e5;
-            background: #fafafa;
+            border-top: 1px solid var(--uf-border);
+            background: var(--uf-bg);
         }
-        
+
         /* Responsive */
-        @media (max-width: 640px) {
+        @media (max-width: 680px) {
             .header {
                 padding: 24px 20px;
             }
@@ -377,35 +420,40 @@
         }
         
         .preview::-webkit-scrollbar-track {
-            background: #f5f5f5;
+            background: var(--uf-progress-track);
         }
-        
+
         .preview::-webkit-scrollbar-thumb {
-            background: #d4d4d4;
+            background: var(--uf-upload-border);
             border-radius: 4px;
         }
-        
+
         .preview::-webkit-scrollbar-thumb:hover {
-            background: #a3a3a3;
+            background: var(--uf-text-muted);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>
-                <i data-lucide="barcode" style="color: #3b82f6;"></i>
-                Generatore Barcode EPS
-            </h1>
+            <div class="header-top">
+                <h1>
+                    <i data-lucide="barcode" size="20" style="color: var(--uf-accent);"></i>
+                    Generatore Barcode EPS
+                </h1>
+                <button class="icon-btn" id="themeToggle" type="button" aria-label="Cambia tema chiaro/scuro" title="Tema chiaro/scuro">
+                    <i data-lucide="moon" size="18"></i>
+                </button>
+            </div>
             <p class="subtitle">Carica il file Excel o CSV con i codici articolo e barcode</p>
         </div>
         
         <div class="content">
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">
-                    <i data-lucide="upload" size="32" stroke-width="1.5" style="color: #3b82f6;"></i>
+                    <i data-lucide="upload" size="32" stroke-width="1.5" style="color: var(--uf-accent);"></i>
                 </div>
-                <div class="upload-text">Trascina il file qui o clicca per selezionare</div>
+                <label class="upload-text" for="fileInput">Trascina il file qui o clicca per selezionare</label>
                 <div class="upload-hint">Supporta file Excel (.xlsx, .xls) e CSV</div>
                 <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
             </div>
@@ -445,30 +493,59 @@
                 <div class="progress-text" id="progressText">0 / 0</div>
             </div>
             
-            <div class="alert alert-success" id="successAlert">
-                <i data-lucide="check-circle" size="20"></i>
+            <div class="alert alert-success" id="successAlert" role="status" aria-live="polite">
+                <i data-lucide="check-circle" size="18"></i>
                 <span id="successText"></span>
             </div>
-            <div class="alert alert-error" id="errorAlert">
-                <i data-lucide="alert-circle" size="20"></i>
+            <div class="alert alert-error" id="errorAlert" role="status" aria-live="polite">
+                <i data-lucide="alert-circle" size="18"></i>
                 <span id="errorText"></span>
             </div>
-            
+
             <div class="preview" id="preview"></div>
         </div>
-        
+
         <div class="footer">
             <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
-            <div style="color: #d4d4d4;">File generati in formato PostScript compatibili con Adobe Illustrator</div>
+            <div style="color: var(--uf-text-muted);">File generati in formato PostScript compatibili con Adobe Illustrator</div>
         </div>
     </div>
 
     <script>
-        // Inizializza le icone Lucide
+        (function() {
+            try {
+                var savedTheme = localStorage.getItem('uf-theme');
+                if (savedTheme === 'dark' || savedTheme === 'light') {
+                    document.documentElement.setAttribute('data-theme', savedTheme);
+                }
+            } catch (e) {}
+        })();
+
+        // Inizializza le icone Lucide e il toggle tema chiaro/scuro
         document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
+
+            const themeToggle = document.getElementById('themeToggle');
+            function isDarkActive() {
+                const explicit = document.documentElement.getAttribute('data-theme');
+                if (explicit === 'dark') return true;
+                if (explicit === 'light') return false;
+                return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            }
+            function syncThemeIcon() {
+                const iconEl = themeToggle.querySelector('i');
+                if (iconEl) iconEl.setAttribute('data-lucide', isDarkActive() ? 'sun' : 'moon');
+                if (window.lucide) lucide.createIcons();
+            }
+            themeToggle.addEventListener('click', () => {
+                const next = isDarkActive() ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                try { localStorage.setItem('uf-theme', next); } catch (e) {}
+                syncThemeIcon();
+            });
+            syncThemeIcon();
         });
-        
+
         let currentData = [];
         let generatedBarcodes = [];
 
@@ -816,8 +893,8 @@ showpage
             const statusWrap = document.createElement('div');
             statusWrap.className = 'preview-status';
             statusWrap.innerHTML = success
-                ? '<i data-lucide="check-circle-2" size="20" style="color: #22c55e;"></i>'
-                : '<i data-lucide="x-circle" size="20" style="color: #dc2626;"></i>';
+                ? '<i data-lucide="check-circle-2" size="16" style="color: var(--uf-success-text);"></i>'
+                : '<i data-lucide="x-circle" size="16" style="color: var(--uf-error-text);"></i>';
             item.appendChild(statusWrap);
 
             const info = document.createElement('div');
@@ -846,13 +923,13 @@ showpage
                 downloadBtn.className = 'btn btn-secondary';
                 downloadBtn.style.padding = '8px 16px';
                 downloadBtn.style.fontSize = '14px';
-                downloadBtn.innerHTML = '<i data-lucide="download" size="16"></i> Scarica';
+                downloadBtn.innerHTML = '<i data-lucide="download" size="18"></i> Scarica';
                 downloadBtn.addEventListener('click', () => downloadFile(entry.filename, entry.content));
                 item.appendChild(downloadBtn);
             }
 
             preview.appendChild(item);
-            lucide.createIcons(); // Re-render icons
+            if (window.lucide) lucide.createIcons(); // Re-render icons
         }
 
         function downloadFile(filename, content) {
@@ -908,13 +985,14 @@ showpage
             
             textElement.textContent = message;
             alert.style.display = 'flex';
-            
+
             // Re-render icons
-            lucide.createIcons();
-            
+            if (window.lucide) lucide.createIcons();
+
+            const hideDelay = type === 'success' ? 6000 : 8000;
             setTimeout(() => {
                 alert.style.display = 'none';
-            }, 5000);
+            }, hideDelay);
         }
     </script>
 </body>
