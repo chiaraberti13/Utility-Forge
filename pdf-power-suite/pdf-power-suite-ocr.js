@@ -10,12 +10,17 @@
  * bounding box's origin and sized from its bounding box height. The page looks identical to the
  * scan, but its text can now be selected, copied and found with Ctrl/Cmd+F.
  *
- * Honest limitation: word glyphs are NOT horizontally stretched to match each bounding box's
- * exact width (pdf-lib's drawText has no independent horizontal-scale option without hand-rolling
- * low-level content-stream operators), so invisible-selection boxes are only approximately —not
- * pixel-perfectly— aligned with the visible word beneath them. Search and copy-all still work
- * correctly since they only depend on the text content and its reading order, not on exact glyph
- * geometry. This is the deliberate scope line for this feature; see the README for detail.
+ * Glyph-width alignment (v1.1): each word is additionally wrapped in
+ * pushGraphicsState()/concatTransformationMatrix(scaleX,0,0,1,x*(1-scaleX),0)/popGraphicsState()
+ * — a standard PDF content-stream idiom, built from pdf-lib's own low-level operator helpers, that
+ * horizontally scales just that word's glyphs around its left edge (x) to its Tesseract bounding
+ * box's exact width, without touching drawText's own font/color/opacity handling. Verified with a
+ * Node round-trip (pdf-lib write → pdf.js read-back): the extracted text run's width matches the
+ * intended scaled width exactly. scaleX is clamped to [0.4, 2.5] so a mis-OCR'd sliver of a word
+ * (e.g. stray punctuation) can't produce a pathologically stretched glyph run. This replaces the
+ * v1.0 approximation and is why invisible-selection boxes now line up closely with the visible
+ * word beneath them — search and copy-all were already correct either way, since those only ever
+ * depended on text content and reading order, not glyph geometry.
  *
  * This is also the ONLY feature in PDF Power Suite that touches the network after the page has
  * loaded: Tesseract.js downloads its worker script, WASM core and per-language traineddata
@@ -102,7 +107,19 @@ PPS.ops.ocr = async function ocrOp(bytes, { langs = 'eng', scale = 2 } = {}, onP
                 const x = bbox.x0 * scaleFactor;
                 const y = baseViewport.height - bbox.y1 * scaleFactor;
                 try {
+                    // Stretch this word's glyphs horizontally so the invisible run's width matches
+                    // its Tesseract bounding box, anchored at the left edge (x) — see file header.
+                    const naturalWidth = font.widthOfTextAtSize(w.text, fontSize);
+                    let scaleX = naturalWidth > 0 ? wPt / naturalWidth : 1;
+                    if (!Number.isFinite(scaleX) || scaleX <= 0) scaleX = 1;
+                    scaleX = Math.max(0.4, Math.min(2.5, scaleX));
+
+                    outPage.pushOperators(
+                        PDFLib.pushGraphicsState(),
+                        PDFLib.concatTransformationMatrix(scaleX, 0, 0, 1, x * (1 - scaleX), 0),
+                    );
                     outPage.drawText(w.text, { x, y, size: fontSize, font, opacity: 0 });
+                    outPage.pushOperators(PDFLib.popGraphicsState());
                 } catch (e) {
                     // A handful of glyphs (rare symbols outside WinAnsi) can't be encoded by the
                     // standard font; skip just that word rather than failing the whole page.

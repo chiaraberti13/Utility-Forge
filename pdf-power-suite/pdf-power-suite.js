@@ -10,6 +10,63 @@
  * the helpers defined here.
  */
 
+// --- theme (dark/light) ---------------------------------------------------
+//
+// Applied immediately, as the very first thing this file does — this script is loaded in <head>,
+// right after the CDN libraries and before the rest of the page body exists, specifically so an
+// explicit saved theme choice is restored before first paint instead of flashing the wrong theme.
+// With no saved choice, no attribute is set at all and the CSS `prefers-color-scheme` rules alone
+// decide the theme, which is already flash-free since it needs no JS.
+(function applyStoredTheme() {
+    try {
+        const saved = localStorage.getItem('uf-theme');
+        if (saved === 'dark' || saved === 'light') {
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+    } catch (e) {
+        // localStorage unavailable (private browsing, disabled site data, etc) — fall back to
+        // the system preference via CSS; the toggle button still works for the rest of this tab.
+    }
+})();
+
+function getEffectiveTheme() {
+    const explicit = document.documentElement.getAttribute('data-theme');
+    if (explicit === 'dark' || explicit === 'light') return explicit;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+function updateThemeToggleIcon() {
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    const isDark = getEffectiveTheme() === 'dark';
+    btn.textContent = '';
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+    icon.setAttribute('width', '20');
+    icon.setAttribute('height', '20');
+    icon.setAttribute('aria-hidden', 'true');
+    btn.appendChild(icon);
+    if (window.lucide) lucide.createIcons();
+}
+
+function initThemeToggle() {
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    updateThemeToggleIcon();
+    btn.addEventListener('click', () => {
+        const next = getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('uf-theme', next); } catch (e) { /* not persisted this session */ }
+        updateThemeToggleIcon();
+    });
+    // Keep the icon correct if the OS theme changes while no explicit choice has been made.
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) updateThemeToggleIcon();
+        });
+    }
+}
+
 // pdf.js needs an explicit worker URL when not using ES modules. Guarded: if the pdf.js CDN
 // script failed to load (offline first load, blocked host, etc), the rest of this file — and the
 // features that don't need pdf.js at all (merge, split, watermark/bates) — must still work.
@@ -242,9 +299,10 @@ function initNav() {
     const buttons = document.querySelectorAll('.nav-btn');
     buttons.forEach((btn) => {
         btn.addEventListener('click', () => {
-            buttons.forEach((b) => b.classList.remove('active'));
+            buttons.forEach((b) => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
             document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
             btn.classList.add('active');
+            btn.setAttribute('aria-current', 'page');
             const panel = document.getElementById('panel-' + btn.dataset.tab);
             if (panel) panel.classList.add('active');
             if (window.lucide) lucide.createIcons();
@@ -674,6 +732,7 @@ async function runWatermark() {
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    initThemeToggle();
     initNav();
     initMerge();
     initSplit();

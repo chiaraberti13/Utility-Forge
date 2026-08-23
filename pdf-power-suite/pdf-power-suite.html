@@ -39,6 +39,22 @@
     <!-- Lucide icons, pinned version -->
     <script src="https://unpkg.com/lucide@0.469.0"></script>
 
+    <!--
+        This app's own scripts are loaded here in <head>, right after the CDN libraries, rather
+        than at the end of <body>. They only touch document.documentElement at their top level
+        (to apply a saved dark/light theme before first paint, avoiding a flash of the wrong
+        theme) and defer everything that needs the rest of the DOM to a DOMContentLoaded handler,
+        so loading them this early is safe.
+    -->
+    <script src="pdf-power-suite.js"></script>
+    <script src="pdf-power-suite-diff.js"></script>
+    <script src="pdf-power-suite-table.js"></script>
+    <script src="pdf-power-suite-mailmerge.js"></script>
+    <script src="pdf-power-suite-ocr.js"></script>
+    <script src="pdf-power-suite-pages.js"></script>
+    <script src="pdf-power-suite-images.js"></script>
+    <script src="pdf-power-suite-pipeline.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -97,6 +113,9 @@
             padding: 28px 32px;
             margin-bottom: 16px;
         }
+
+        .header-flex { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+        .header-flex .icon-btn { flex-shrink: 0; width: 38px; height: 38px; }
 
         h1 {
             font-size: 24px;
@@ -232,7 +251,7 @@
         input[type="file"] { display: none; }
 
         .field-row { margin-top: 18px; }
-        .field-row label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--uf-text); }
+        .field-row label, .field-row .field-row-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--uf-text); }
         .field-hint { font-size: 12px; color: var(--uf-text-muted); margin-top: 4px; }
 
         .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 18px; }
@@ -377,6 +396,23 @@
 
         .footer-note { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--uf-border); font-size: 12px; color: #a3a3a3; text-align: center; }
 
+        .pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-top: 16px; }
+        .page-tile {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            border: 1px solid var(--uf-border); border-radius: 8px; padding: 8px;
+            background: var(--uf-bg); cursor: grab;
+        }
+        .page-tile.dragging { opacity: 0.4; }
+        .page-tile.drag-over { border-color: var(--uf-accent); background: var(--uf-accent-soft); }
+        .page-thumb-wrap {
+            width: 100%; aspect-ratio: 3 / 4; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; background: white; border: 1px solid var(--uf-border); border-radius: 4px;
+        }
+        .page-thumb-wrap canvas, .page-thumb-wrap img { max-width: 100%; max-height: 100%; transition: transform 0.15s ease; }
+        .page-tile .page-num { font-size: 12px; color: var(--uf-text-muted); font-weight: 600; text-align: center; }
+        .page-tile .page-controls { display: flex; gap: 4px; }
+        .page-tile .page-controls .btn-icon { width: 26px; height: 26px; }
+
         /* Sidenav-to-top-nav collapse gets its own, slightly wider breakpoint — 680px is too
            narrow for a comfortable horizontal scroller with nine tab labels. Every other
            responsive adjustment below uses the standard 680px breakpoint shared across the suite. */
@@ -402,16 +438,21 @@
 </head>
 <body>
     <div class="app">
-        <div class="header">
-            <h1><i data-lucide="file-stack" size="20" style="color:var(--uf-accent);"></i> PDF Power Suite</h1>
-            <p class="subtitle">Merge, split, compress, watermark, OCR, diff, extract and mail-merge PDFs — entirely in your browser, nothing uploaded to a server.</p>
+        <div class="header header-flex">
+            <div>
+                <h1><i data-lucide="file-stack" size="20" style="color:var(--uf-accent);"></i> PDF Power Suite</h1>
+                <p class="subtitle">Merge, split, compress, watermark, OCR, diff, extract and mail-merge PDFs — entirely in your browser, nothing uploaded to a server.</p>
+            </div>
+            <button class="icon-btn" id="themeToggle" type="button" aria-label="Cambia tema chiaro/scuro" title="Tema chiaro/scuro"></button>
         </div>
 
         <div class="shell">
-            <nav class="sidenav" id="sidenav">
-                <button class="nav-btn active" data-tab="merge"><i data-lucide="combine" size="20"></i> Merge</button>
+            <nav class="sidenav" id="sidenav" aria-label="PDF operations">
+                <button class="nav-btn active" data-tab="merge" aria-current="page"><i data-lucide="combine" size="20"></i> Merge</button>
                 <button class="nav-btn" data-tab="split"><i data-lucide="scissors" size="20"></i> Split</button>
+                <button class="nav-btn" data-tab="pages"><i data-lucide="layout-grid" size="20"></i> Pagine</button>
                 <button class="nav-btn" data-tab="compress"><i data-lucide="minimize-2" size="20"></i> Compress</button>
+                <button class="nav-btn" data-tab="images"><i data-lucide="images" size="20"></i> PDF &rarr; Immagini</button>
                 <button class="nav-btn" data-tab="watermark"><i data-lucide="stamp" size="20"></i> Watermark &amp; Bates</button>
                 <button class="nav-btn" data-tab="ocr"><i data-lucide="scan-text" size="20"></i> OCR</button>
                 <button class="nav-btn" data-tab="diff"><i data-lucide="git-compare" size="20"></i> Diff</button>
@@ -463,7 +504,7 @@
                         </div>
                         <div class="file-list" id="split-file-list"></div>
                         <div class="field-row">
-                            <label>Split mode</label>
+                            <span class="field-row-label" id="split-mode-label">Split mode</span>
                             <div class="checkbox-row" style="margin-bottom:8px;">
                                 <input type="radio" name="split-mode" id="split-mode-pages" value="pages" checked>
                                 <label for="split-mode-pages" style="font-weight:400;">One PDF per page</label>
@@ -490,6 +531,35 @@
                     </div>
                 </section>
 
+                <!-- ============ PAGES (page management) ============ -->
+                <section class="panel" id="panel-pages">
+                    <div class="panel-header">
+                        <h2><i data-lucide="layout-grid" size="20" style="color:var(--uf-accent);"></i> Pagine (Page Management)</h2>
+                        <p class="panel-desc">Reorder, rotate, or delete individual pages of one PDF, then export the result.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-area" id="pages-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
+                            <div class="upload-text">Drop a PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="pages-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="pages-file-list"></div>
+                        <div class="field-hint" id="pages-hint" style="display:none; margin-top:16px;">Drag a page tile to reorder it. Use the buttons on each tile to rotate 90° or delete a page.</div>
+                        <div class="pages-grid" id="pages-grid"></div>
+                        <div class="actions">
+                            <button class="btn" id="pages-run-btn" disabled><i data-lucide="play" size="18"></i> Export &amp; Download</button>
+                            <button class="btn btn-secondary" id="pages-reset-btn" style="display:none;"><i data-lucide="rotate-ccw" size="18"></i> Reset order/rotation</button>
+                        </div>
+                        <div class="progress-container" id="pages-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="pages-progress-fill"></div></div>
+                            <div class="progress-text" id="pages-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="pages-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="pages-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
                 <!-- ============ COMPRESS ============ -->
                 <section class="panel" id="panel-compress">
                     <div class="panel-header">
@@ -510,11 +580,11 @@
                         <div class="file-list" id="compress-file-list"></div>
                         <div class="field-grid">
                             <div class="field-row" style="margin-top:0;">
-                                <label>Rasterize DPI: <span class="range-value" id="compress-dpi-value">150</span></label>
+                                <label for="compress-dpi">Rasterize DPI: <span class="range-value" id="compress-dpi-value">150</span></label>
                                 <input type="range" id="compress-dpi" min="72" max="300" step="1" value="150">
                             </div>
                             <div class="field-row" style="margin-top:0;">
-                                <label>JPEG quality: <span class="range-value" id="compress-quality-value">0.75</span></label>
+                                <label for="compress-quality">JPEG quality: <span class="range-value" id="compress-quality-value">0.75</span></label>
                                 <input type="range" id="compress-quality" min="0.05" max="1" step="0.05" value="0.75">
                             </div>
                         </div>
@@ -527,6 +597,59 @@
                         </div>
                         <div class="alert alert-success" role="status" aria-live="polite" id="compress-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
                         <div class="alert alert-error" role="status" aria-live="polite" id="compress-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    </div>
+                </section>
+
+                <!-- ============ PDF TO IMAGES ============ -->
+                <section class="panel" id="panel-images">
+                    <div class="panel-header">
+                        <h2><i data-lucide="images" size="20" style="color:var(--uf-accent);"></i> PDF &rarr; Immagini</h2>
+                        <p class="panel-desc">Rasterize a page range and download each page as a PNG or JPG image.</p>
+                    </div>
+                    <div class="panel-body">
+                        <div class="notice info">
+                            <i data-lucide="info" size="18"></i>
+                            <span>Different from Compress: the output here is one image file per page (for use outside a PDF viewer — slides, web pages, image editors), not a rebuilt PDF.</span>
+                        </div>
+                        <div class="upload-area" id="images-upload">
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
+                            <div class="upload-text">Drop a PDF here or click to select</div>
+                            <div class="upload-hint">One file at a time</div>
+                            <input type="file" id="images-file-input" accept="application/pdf,.pdf">
+                        </div>
+                        <div class="file-list" id="images-file-list"></div>
+                        <div class="field-grid">
+                            <div class="field-row" style="margin-top:0;">
+                                <label for="images-page-range">Page range</label>
+                                <input type="text" id="images-page-range" placeholder="e.g. 1-3 (leave blank for all)">
+                            </div>
+                            <div class="field-row" style="margin-top:0;">
+                                <label for="images-format">Format</label>
+                                <select id="images-format">
+                                    <option value="jpeg" selected>JPEG</option>
+                                    <option value="png">PNG</option>
+                                </select>
+                            </div>
+                            <div class="field-row" style="margin-top:0;">
+                                <label for="images-dpi">Rasterize DPI: <span class="range-value" id="images-dpi-value">150</span></label>
+                                <input type="range" id="images-dpi" min="72" max="300" step="1" value="150">
+                            </div>
+                            <div class="field-row" style="margin-top:0;" id="images-quality-row">
+                                <label for="images-quality">JPEG quality: <span class="range-value" id="images-quality-value">0.85</span></label>
+                                <input type="range" id="images-quality" min="0.05" max="1" step="0.05" value="0.85">
+                            </div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" id="images-run-btn" disabled><i data-lucide="play" size="18"></i> Rasterize</button>
+                            <button class="btn btn-secondary" id="images-zip-btn" style="display:none;"><i data-lucide="download" size="18"></i> Download all as ZIP</button>
+                        </div>
+                        <div class="progress-container" id="images-progress">
+                            <div class="progress-bar"><div class="progress-fill" id="images-progress-fill"></div></div>
+                            <div class="progress-text" id="images-progress-text"></div>
+                        </div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="images-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="images-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="pages-grid" id="images-results"></div>
                     </div>
                 </section>
 
@@ -557,15 +680,15 @@
                                     <input type="text" id="wm-text" value="CONFIDENTIAL" maxlength="200">
                                 </div>
                                 <div class="field-row" style="margin-top:0;">
-                                    <label>Rotation: <span class="range-value" id="wm-rotation-value">45</span>°</label>
+                                    <label for="wm-rotation">Rotation: <span class="range-value" id="wm-rotation-value">45</span>°</label>
                                     <input type="range" id="wm-rotation" min="-180" max="180" step="1" value="45">
                                 </div>
                                 <div class="field-row" style="margin-top:0;">
-                                    <label>Opacity: <span class="range-value" id="wm-opacity-value">0.25</span></label>
+                                    <label for="wm-opacity">Opacity: <span class="range-value" id="wm-opacity-value">0.25</span></label>
                                     <input type="range" id="wm-opacity" min="0.05" max="1" step="0.05" value="0.25">
                                 </div>
                                 <div class="field-row" style="margin-top:0;">
-                                    <label>Font size: <span class="range-value" id="wm-fontsize-value">48</span>pt</label>
+                                    <label for="wm-fontsize">Font size: <span class="range-value" id="wm-fontsize-value">48</span>pt</label>
                                     <input type="range" id="wm-fontsize" min="8" max="120" step="1" value="48">
                                 </div>
                                 <div class="field-row" style="margin-top:0;">
@@ -641,7 +764,7 @@
                         </div>
                         <div class="notice info">
                             <i data-lucide="info" size="18"></i>
-                            <span>Output: the recognized words are drawn back onto each page as real, selectable/searchable PDF text with <code>opacity: 0</code> — visually the page looks exactly like the original scan, but you can now select, copy and search its text. Word position and size are matched to Tesseract's bounding boxes; very small or rotated text may end up only approximately aligned, since the goal is searchability, not pixel-perfect invisible glyph placement.</span>
+                            <span>Output: the recognized words are drawn back onto each page as real, selectable/searchable PDF text with <code>opacity: 0</code> — visually the page looks exactly like the original scan, but you can now select, copy and search its text. Each word is positioned, sized, and horizontally scaled to match its Tesseract bounding box, so the invisible selection closely tracks the visible word beneath it; rotated text or a badly mis-recognized word can still end up only approximately aligned.</span>
                         </div>
                         <div class="upload-area" id="ocr-upload">
                             <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
@@ -652,7 +775,7 @@
                         <div class="file-list" id="ocr-file-list"></div>
                         <div class="field-grid">
                             <div class="field-row" style="margin-top:0;">
-                                <label>Language(s)</label>
+                                <span class="field-row-label">Language(s)</span>
                                 <div class="checkbox-row" style="margin-bottom:6px;">
                                     <input type="checkbox" id="ocr-lang-eng" checked>
                                     <label for="ocr-lang-eng" style="font-weight:400;">English</label>
@@ -663,7 +786,7 @@
                                 </div>
                             </div>
                             <div class="field-row" style="margin-top:0;">
-                                <label>Rasterize scale: <span class="range-value" id="ocr-scale-value">2.0</span>x</label>
+                                <label for="ocr-scale">Rasterize scale: <span class="range-value" id="ocr-scale-value">2.0</span>x</label>
                                 <input type="range" id="ocr-scale" min="1" max="3" step="0.5" value="2">
                                 <div class="field-hint">Higher improves OCR accuracy but is slower.</div>
                             </div>
@@ -708,7 +831,7 @@
                             </div>
                         </div>
                         <div class="field-row">
-                            <label>Diff mode</label>
+                            <span class="field-row-label">Diff mode</span>
                             <div class="checkbox-row" style="margin-bottom:8px;">
                                 <input type="radio" name="diff-mode" id="diff-mode-text" value="text" checked>
                                 <label for="diff-mode-text" style="font-weight:400;">Text diff (word-level)</label>
@@ -755,11 +878,11 @@
                                 <input type="text" id="table-page-range" placeholder="e.g. 1-3 (leave blank for all)">
                             </div>
                             <div class="field-row" style="margin-top:0;">
-                                <label>Row tolerance: <span class="range-value" id="table-row-tol-value">4</span>px</label>
+                                <label for="table-row-tol">Row tolerance: <span class="range-value" id="table-row-tol-value">4</span>px</label>
                                 <input type="range" id="table-row-tol" min="1" max="20" step="1" value="4">
                             </div>
                             <div class="field-row" style="margin-top:0;">
-                                <label>Column gap threshold: <span class="range-value" id="table-col-gap-value">12</span>px</label>
+                                <label for="table-col-gap">Column gap threshold: <span class="range-value" id="table-col-gap-value">12</span>px</label>
                                 <input type="range" id="table-col-gap" min="3" max="60" step="1" value="12">
                             </div>
                         </div>
@@ -838,10 +961,9 @@
                         <div class="file-list" id="pipeline-file-list"></div>
 
                         <div class="field-row">
-                            <label>Recall a saved pipeline</label>
-                            <select id="pipeline-recall-select">
-                                <option value="">— none —</option>
-                            </select>
+                            <span class="field-row-label" id="pipeline-history-label">Cronologia (last 5 runs/exports)</span>
+                            <div id="pipeline-history-list" class="step-list" aria-labelledby="pipeline-history-label"></div>
+                            <div class="field-hint" id="pipeline-history-empty">No saved pipelines yet — run or export one to see it here.</div>
                         </div>
 
                         <div class="field-grid">
@@ -881,12 +1003,5 @@
             </div>
         </div>
     </div>
-
-    <script src="pdf-power-suite.js"></script>
-    <script src="pdf-power-suite-diff.js"></script>
-    <script src="pdf-power-suite-table.js"></script>
-    <script src="pdf-power-suite-mailmerge.js"></script>
-    <script src="pdf-power-suite-ocr.js"></script>
-    <script src="pdf-power-suite-pipeline.js"></script>
 </body>
 </html>

@@ -2,15 +2,16 @@
 
 > 🇮🇹 **Italiano** | 🇬🇧 [English](README.md)
 
-Un'unica applicazione web autonoma che raggruppa nove operazioni sui PDF — unire, dividere,
-comprimere, filigrana e numerazione Bates, OCR verso PDF ricercabile, confronto tra versioni,
-estrazione tabelle, stampa unione da CSV verso moduli PDF e un generatore di pipeline per
-concatenarle — in un'unica pagina. Tutto avviene nel browser: i tuoi documenti non vengono mai
-caricati su un server. Molti strumenti gratuiti "unisci/dividi PDF" online si fermano qui;
-PDF Power Suite va oltre raggruppando operazioni raramente gratuite *e* client-side nello stesso
-posto — OCR offline, un vero confronto parola-per-parola e pixel-per-pixel tra due versioni di un
-PDF, stampa unione verso campi modulo compilabili ed estrazione tabelle euristica — più un modo
-per concatenarle in una pipeline ripetibile.
+Un'unica applicazione web autonoma che raggruppa undici operazioni sui PDF — unire, dividere,
+gestione pagine, comprimere, PDF → immagini, filigrana e numerazione Bates, OCR verso PDF
+ricercabile, confronto tra versioni, estrazione tabelle, stampa unione da CSV verso moduli PDF e un
+generatore di pipeline per concatenarle — in un'unica pagina, con un selettore di tema
+chiaro/scuro. Tutto avviene nel browser: i tuoi documenti non vengono mai caricati su un server.
+Molti strumenti gratuiti "unisci/dividi PDF" online si fermano qui; PDF Power Suite va oltre
+raggruppando operazioni raramente gratuite *e* client-side nello stesso posto — OCR offline, un
+vero confronto parola-per-parola e pixel-per-pixel tra due versioni di un PDF, stampa unione verso
+campi modulo compilabili ed estrazione tabelle euristica — più un modo per concatenarle in una
+pipeline ripetibile.
 
 ---
 
@@ -23,11 +24,13 @@ Questo pacchetto contiene:
 - **`pdf-power-suite-table.js`** — la funzione Estrazione Tabelle
 - **`pdf-power-suite-mailmerge.js`** — la funzione Stampa Unione
 - **`pdf-power-suite-ocr.js`** — la funzione OCR
+- **`pdf-power-suite-pages.js`** — la funzione Pagine (gestione pagine)
+- **`pdf-power-suite-images.js`** — la funzione PDF → Immagini
 - **`pdf-power-suite-pipeline.js`** — il Generatore di Pipeline
 - **`LICENSE`** — Licenza MIT
 - **`README.md`** / **`README-IT.md`** — questa documentazione (inglese / italiano)
 
-Tutti e sei i file `.js` devono restare nella stessa cartella del file `.html` — la pagina li
+Tutti e otto i file `.js` devono restare nella stessa cartella del file `.html` — la pagina li
 carica con semplici tag relativi `<script src="...">`.
 
 ---
@@ -59,7 +62,7 @@ Due modalità d'uso, entrambe valide:
 1. **Doppio click** su `pdf-power-suite.html` (oppure apri il suo URL, se ospitata su un server).
 2. Si apre nel browser predefinito. Funziona con Chrome, Firefox, Safari, Edge (qualsiasi browser
    moderno e aggiornato).
-3. Il menu laterale elenca le nove operazioni come schede; viene mostrato un solo pannello alla
+3. Il menu laterale elenca le undici operazioni come schede; viene mostrato un solo pannello alla
    volta.
 
 💡 **Nota:** la pagina carica sette piccole librerie da CDN via internet ogni volta che la apri,
@@ -68,7 +71,7 @@ tranne **OCR** non tocca più la rete — vedi [Privacy e Sicurezza](#-privacy-e
 per il dettaglio completo.
 
 ✅ **Come capire se si è caricata correttamente:** se il menu laterale mostra un'icona colorata
-accanto a ciascuno dei nove nomi di scheda, le librerie si sono caricate correttamente. Se le
+accanto a ciascuno degli undici nomi di scheda, le librerie si sono caricate correttamente. Se le
 icone mancano o il pulsante "Esegui" di una scheda non si attiva mai dopo aver scelto un file,
 controlla la connessione e ricarica — vedi [Risoluzione problemi](#-risoluzione-problemi).
 
@@ -162,17 +165,40 @@ Compila una copia di un modulo PDF per ogni riga di un foglio di calcolo.
 ### 9. Generatore di Pipeline
 Concatena operazioni in modo che l'output di ogni fase diventi l'input della successiva.
 1. Carica il PDF di partenza.
-2. Scegli un tipo di fase (**Merge**, **Compress**, **Watermark**, **Bates numbering**, o **OCR** —
-   le altre quattro schede non sono incluse perché non sono trasformazioni "un input, un output")
+2. Scegli un tipo di fase (**Merge**, **Compress**, **Watermark**, **Bates numbering**, o **OCR**)
    e clicca **Add step**; configurala direttamente in linea, poi aggiungi altre fasi e riordinale
-   con ▲/▼.
+   con ▲/▼. Dividi e PDF → Immagini non sono incluse perché producono più file di output per
+   esecuzione, Confronto / Estrazione Tabelle / Stampa Unione richiedono un secondo input non-PDF,
+   e la modifica interattiva di Pagine (trascina/ruota/elimina) non si riduce a una fase
+   scriptabile.
 3. Clicca **Run Pipeline & Download** per eseguire tutte le fasi in ordine con un indicatore di
    avanzamento, oppure **Export JSON** per salvare l'elenco delle fasi (solo le impostazioni, non
    i file) per dopo, oppure **Import JSON** per ricaricarne uno.
-4. Le ultime 5 pipeline eseguite o esportate vengono conservate nella memoria locale di questo
-   browser e proposte nel menu **Recall a saved pipeline** per un riutilizzo rapido. Una fase
-   Merge richiamata/importata richiede di riallegare i file aggiuntivi, poiché i contenuti dei
-   file non fanno parte di una definizione salvata.
+4. L'elenco **Cronologia** mostra le ultime 5 esecuzioni/esportazioni della pipeline — data/ora,
+   riepilogo delle fasi e numero di file in ingresso/uscita — ciascuna con un pulsante **Load** per
+   ripristinare quelle impostazioni con un click. Una fase Merge ripristinata richiede di
+   riallegare i file aggiuntivi, poiché i contenuti dei file non fanno parte di una definizione
+   salvata.
+
+### 10. Pagine (Gestione Pagine)
+Riordina, ruota o elimina singole pagine di un PDF.
+1. Seleziona un singolo PDF; appare una griglia di anteprime di ogni pagina.
+2. **Trascina** una miniatura di pagina per spostarla in una nuova posizione.
+3. Usa i pulsanti su ciascuna miniatura per **ruotare** quella pagina di 90° a sinistra/destra
+   (ripetibile fino a 270°) oppure per **eliminarla**.
+4. Clicca **Export & Download** per ricostruire il PDF nel nuovo ordine con le rotazioni
+   applicate, oppure **Reset order/rotation** per ripartire dal file originale senza doverlo
+   ricaricare.
+
+### 11. PDF → Immagini
+Rasterizza un intervallo di pagine ed esporta ogni pagina come immagine autonoma (diverso da
+Comprimi, il cui output resta un PDF più piccolo, non file immagine).
+1. Seleziona un singolo PDF e, facoltativamente, un intervallo di pagine (vuoto = tutte le
+   pagine).
+2. Scegli **PNG** o **JPEG**, e imposta lo slider **DPI** (e, per JPEG, lo slider **qualità**).
+3. Clicca **Rasterize** per renderizzare ogni pagina selezionata e vederne un'anteprima.
+4. Scarica le immagini **singolarmente** da ciascuna anteprima, oppure clicca **Download all as
+   ZIP** per tutte le pagine rasterizzate insieme.
 
 ---
 
@@ -193,14 +219,15 @@ normale testo PDF con `opacity: 0`, posizionate al riquadro di delimitazione di 
 dimensionate in base alla sua altezza, così il risultato appare identico alla scansione ma il suo
 testo è selezionabile, copiabile e ricercabile con Ctrl/Cmd+F.
 
-Un limite dichiarato onestamente: i glifi delle parole **non vengono stirati orizzontalmente** per
-corrispondere esattamente alla larghezza di ciascun riquadro (farlo senza perdite richiederebbe
-operatori di basso livello nello stream di contenuto del PDF scritti a mano, giudicato non
-conveniente per un livello invisibile, viste le fragilità che introdurrebbe). Questo significa che
-il riquadro di selezione invisibile sotto una parola è allineato solo approssimativamente — non in
-modo perfetto al pixel — con la parola visibile sottostante. La ricerca e "seleziona tutto"
-funzionano comunque correttamente, poiché dipendono solo dal contenuto testuale e dal suo ordine
-di lettura, non dalla geometria esatta dei glifi.
+**Dalla v1.1**, i glifi di ogni parola vengono anche scalati orizzontalmente (tramite una matrice
+di trasformazione standard nello stream di contenuto PDF, applicata attorno al bordo sinistro della
+parola) così che la larghezza del testo invisibile corrisponda esattamente al riquadro di
+delimitazione individuato da Tesseract, non solo la sua posizione e altezza. Questo è stato
+verificato con un ciclo scrittura/lettura (creato con pdf-lib, riletto con pdf.js) che conferma che
+la larghezza del testo estratto corrisponde esattamente. Il limite onesto che resta: testo ruotato
+o parole riconosciute male dall'OCR possono ancora risultare allineate solo in modo approssimativo.
+La ricerca e "seleziona tutto" erano già del tutto corrette anche nella v1.0, poiché dipendono solo
+dal contenuto testuale e dal suo ordine di lettura, mai dalla geometria esatta dei glifi.
 
 ### Estrazione tabelle
 Il rilevamento di righe/colonne è **euristico**: raggruppa gli elementi di testo per coordinata Y
@@ -223,20 +250,30 @@ gran parte della pagina come "diversa" semplicemente a causa del ridimensionamen
 ## 🎯 CARATTERISTICHE
 
 ✅ **Nessuna installazione** — basta aprire il file HTML
-✅ **Nove operazioni sui PDF in un'unica pagina** — unisci, dividi, comprimi, filigrana e Bates,
-OCR, confronto, estrazione tabelle, stampa unione, generatore di pipeline
+✅ **Undici operazioni sui PDF in un'unica pagina** — unisci, dividi, gestione pagine, comprimi,
+PDF → immagini, filigrana e Bates, OCR, confronto, estrazione tabelle, stampa unione, generatore di
+pipeline
 ✅ **Offline dopo il primo caricamento**, tranne l'OCR (vedi Privacy e Sicurezza)
 ✅ **Multi-piattaforma** — Windows, Mac, Linux, Android, iOS
-✅ **Output OCR realmente ricercabile** — livello di testo invisibile, non solo un'esportazione .txt
+✅ **Output OCR realmente ricercabile** — livello di testo invisibile con posizionamento allineato
+alla larghezza dei glifi, non solo un'esportazione .txt
 ✅ **Confronto PDF a livello di parola e di pixel** in un unico strumento
+✅ **Gestione pagine con riordino drag-and-drop** — ruota ed elimina pagine in una griglia di
+anteprime
 ✅ **Stampa unione CSV/XLSX verso veri campi AcroForm**, con resoconto degli scarti e flattening
 facoltativo
-✅ **Generatore di pipeline** con esportazione/importazione JSON e richiamo delle ultime 5 pipeline
-✅ **Download ZIP** per ogni output multi-file (dividi, stampa unione)
+✅ **Generatore di pipeline** con esportazione/importazione JSON e una cronologia visibile,
+ricaricabile con un click, delle ultime 5 esecuzioni/esportazioni
+✅ **Download ZIP** per ogni output multi-file (dividi, PDF → immagini, stampa unione)
 ✅ **Trascina e rilascia** su ogni area di caricamento
+✅ **Temi chiaro e scuro** — segue la preferenza di sistema di default, con un selettore manuale che
+ricorda la scelta
 ✅ **Design responsive** — il menu laterale diventa uno scorrimento orizzontale su schermi stretti
+✅ **Accessibile da tastiera** — indicatori di focus visibili, controlli etichettati, `aria-current`
+sulla scheda attiva
 ✅ **Icone vettoriali** — Lucide Icons, versione fissata
-✅ **Palette blu** — stesso linguaggio visivo del resto di questa suite di strumenti
+✅ **Palette blu** — stesso linguaggio visivo del resto di questa suite di strumenti, ora basato su
+un insieme condiviso di variabili CSS per entrambi i temi
 
 ---
 
@@ -369,13 +406,18 @@ caricamento.
 - **Tutto il JavaScript in file esterni** — ogni file `.js` viene caricato tramite un semplice tag
   `<script src="...">` (non inline nell'HTML), il che è ciò che permette alla CSP sopra di usare un
   semplice `script-src 'self' ...` invece di un fragile hash per script inline.
+- **`localStorage` resta su questo dispositivo** — la scelta del tema chiaro/scuro e la cronologia
+  delle ultime 5 esecuzioni/esportazioni del Generatore di Pipeline (solo tipi di fase e
+  impostazioni, mai i contenuti dei file) vengono salvate nel `localStorage` di questo browser,
+  isolato all'origine di questa pagina. Nulla nel `localStorage` viene mai trasmesso altrove; serve
+  solo a far sopravvivere quelle due piccole preferenze a un ricaricamento della pagina.
 
 ---
 
 ## 💾 CONDIVISIONE
 
 Puoi condividere l'intera cartella con i colleghi:
-1. Copia tutti i file (l'`.html`, tutti e sei i file `.js`, `LICENSE`) su una chiavetta USB o una
+1. Copia tutti i file (l'`.html`, tutti e otto i file `.js`, `LICENSE`) su una chiavetta USB o una
    cartella condivisa.
 2. Oppure condividi via email/WeTransfer/Google Drive come un unico ZIP della cartella.
 3. Chi la riceve deve solo aprire `pdf-power-suite.html` — gli altri file devono restare accanto ad
@@ -386,6 +428,43 @@ Puoi condividere l'intera cartella con i colleghi:
 ---
 
 ## 📝 CHANGELOG
+
+### Versione 1.1 — Coerenza, Tema Scuro e Nuove Funzionalità
+- 🎨 **Variabili del design system condivise con tutta la suite Utility Forge** — ogni colore della
+  pagina ora proviene da un piccolo insieme di variabili CSS (`--uf-*`) invece che da valori
+  esadecimali fissi, così questo strumento è ora visivamente identico agli altri cinque strumenti
+  della suite.
+- 🌗 **Selettore di tema chiaro/scuro** — segue la preferenza del sistema operativo di default; il
+  pulsante nell'intestazione ricorda una scelta esplicita nel `localStorage` e la applica prima del
+  primo rendering (nessun lampo del tema sbagliato). Il contenuto delle pagine PDF renderizzate non
+  viene mai ricolorato — solo l'interfaccia intorno cambia tema.
+- 🆕 **Nuova scheda: Pagine (Gestione Pagine)** — riordina le pagine trascinando le anteprime, ruota
+  singole pagine di 90°/180°/270°, eliminale, ed esporta il risultato — tutto su un solo PDF, senza
+  dover passare per Dividi + Unisci per un semplice riordino.
+- 🆕 **Nuova scheda: PDF → Immagini** — rasterizza un intervallo di pagine ed esporta immagini PNG o
+  JPEG, un file per pagina, scaricabili singolarmente o come ZIP. Diversa da Comprimi, il cui output
+  resta un PDF (più piccolo) invece di diventare file immagine.
+- 🎯 **Allineamento del testo OCR più preciso** — il testo OCR invisibile viene ora scalato
+  orizzontalmente per corrispondere esattamente alla larghezza del riquadro di delimitazione
+  individuato da Tesseract per ciascuna parola (in precedenza venivano abbinate solo posizione e
+  altezza), così i riquadri di selezione seguono più da vicino la parola visibile. Verificato con un
+  ciclo scrittura/lettura che conferma che la larghezza del testo estratto corrisponde esattamente.
+  Vedi [Limiti tecnici → Risultato dell'OCR](#-limiti-tecnici) per le limitazioni residue dichiarate
+  onestamente.
+- 📜 **Cronologia visibile del Generatore di Pipeline** — le ultime 5 esecuzioni/esportazioni sono
+  ora mostrate come un elenco leggibile (data/ora, riepilogo delle fasi, numero di file in
+  ingresso/uscita) con un pulsante **Load** per un ripristino con un click, invece di un semplice
+  menu a tendina.
+- ♿ **Passaggio di accessibilità** — indicatori di focus visibili su ogni elemento interattivo,
+  `aria-label` su ogni pulsante solo-icona, `<label for>` correttamente abbinato al proprio campo in
+  tutta l'app, `aria-current` sulla scheda attiva, e `role="status" aria-live="polite"` sui messaggi
+  di successo/errore così gli screen reader li annunciano.
+- ⏱️ Tempistica di scomparsa automatica degli avvisi standardizzata: i messaggi di successo/info
+  scompaiono dopo 6s, quelli di errore/avviso restano per 8s (in precedenza gli errori non
+  scomparivano mai automaticamente).
+- 📱 Breakpoint responsive standardizzato a 680px per allinearsi al resto della suite (il passaggio
+  dal menu laterale al menu orizzontale mantiene il proprio breakpoint leggermente più ampio di
+  780px, poiché 680px è troppo stretto per uno scorrimento orizzontale delle schede comodo).
 
 ### Versione 1.0
 - 🎉 Prima release
