@@ -252,6 +252,31 @@ longer text-selectable or searchable.
 
 ## 📝 CHANGELOG
 
+### Version 1.1
+- 🌓 **Light/dark theme toggle** in the header, remembered per browser (`localStorage`) and
+  synced with the OS preference by default. The theme only changes the surrounding chrome — every
+  canvas (image pixels, rendered PDF pages, redaction box colors) always renders identically in
+  both themes, since that's the actual content being redacted and must never appear to change.
+- 🎨 Shared Utility Forge design tokens (CSS custom properties) so this tool is visually consistent
+  with the rest of the suite; unified alert component (auto-hides success/info after 6s,
+  error/warning after 8s; persistent alerts like the batch auto-apply warning stay visible).
+- ♿ Accessibility pass: visible focus rings, `aria-label` on every icon-only control and file
+  input, `role="status" aria-live="polite"` on alerts, and keyboard-reachable redaction controls
+  (see the new shortcuts below). Responsive breakpoint standardized to 680px.
+- 🗂️ **Global detection panel**: a collapsible list of every suggested/confirmed box across *all*
+  pages of the current PDF (page, category, matched-text snippet, status), each row clickable to
+  jump straight to that box — no more paging through a long document one screen at a time to find
+  what was flagged.
+- ⌨️ **Keyboard shortcuts** for reviewing PDF detections: `Enter`/`Space` confirms the selected
+  box, `Delete`/`Backspace` rejects it, `[`/`]` or arrow keys move between boxes on the current
+  page, `PageUp`/`PageDown` or `p`/`n` move between pages. A `?` button shows the shortcut list;
+  a live status line announces the current selection for screen-reader users.
+- 🏷️ **Redaction reason tagging**: every box now carries its detection category (email, phone,
+  IBAN, credit card, codice fiscale, or manual) and an editable free-text reason, both shown in the
+  detection panel. The post-export summary now reports a real audit trail, e.g. *"12 redazioni
+  applicate: 4 email, 3 IBAN, 5 manuali"*, in both the interactive and batch flows — not just a
+  bare count.
+
 ### Version 1.0
 - 🎉 First release
 - ✅ Image redaction with freehand rectangles, undo/clear, color picker, direct pixel destruction
@@ -280,5 +305,5 @@ Copyright (c) 2026 Chiara Berti 13
 
 ---
 
-**Document Redaction & Sanitization Studio v1.0**  
+**Document Redaction & Sanitization Studio v1.1**  
 By Chiara Berti - 2026

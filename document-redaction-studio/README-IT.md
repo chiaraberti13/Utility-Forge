@@ -276,6 +276,36 @@ testo.
 
 ## 📝 CHANGELOG
 
+### Versione 1.1
+- 🌓 **Interruttore tema chiaro/scuro** nell'intestazione, memorizzato per browser
+  (`localStorage`) e allineato per default alla preferenza del sistema operativo. Il tema cambia
+  solo la cornice dell'interfaccia: ogni canvas (pixel dell'immagine, pagine PDF renderizzate,
+  colori dei box di redazione) viene sempre disegnato in modo identico in entrambi i temi, perché
+  è proprio il contenuto da redigere e non deve mai sembrare diverso.
+- 🎨 Token di design condivisi con tutta la suite Utility Forge, per un aspetto coerente tra i
+  vari strumenti; componente alert unificato (nasconde da sé successo/info dopo 6s, errore/avviso
+  dopo 8s; gli alert persistenti come l'avviso di applicazione automatica in batch restano
+  visibili).
+- ♿ Interventi di accessibilità: anelli di focus visibili, `aria-label` su ogni controllo solo-icona
+  e input file, `role="status" aria-live="polite"` sugli alert, controlli di redazione
+  raggiungibili da tastiera (vedi le nuove scorciatoie sotto). Breakpoint responsive uniformato a
+  680px.
+- 🗂️ **Pannello globale dei rilevamenti**: un elenco pieghevole di tutti i box suggeriti/confermati
+  su *tutte* le pagine del PDF corrente (pagina, categoria, estratto del testo trovato, stato),
+  ogni riga cliccabile per saltare direttamente a quel box — non serve più scorrere un documento
+  lungo una schermata alla volta per trovare cosa è stato segnalato.
+- ⌨️ **Scorciatoie da tastiera** per la revisione dei rilevamenti PDF: `Invio`/`Spazio` conferma il
+  box selezionato, `Canc`/`Backspace` lo rimuove, `[`/`]` o le frecce spostano la selezione tra i
+  box della pagina corrente, `PagSu`/`PagGiù` o `p`/`n` cambiano pagina. Un pulsante "?" mostra
+  l'elenco delle scorciatoie; una riga di stato annuncia la selezione corrente per chi usa uno
+  screen reader.
+- 🏷️ **Etichettatura del motivo di redazione**: ogni box porta ora con sé la sua categoria di
+  rilevamento (email, telefono, IBAN, carta di credito, codice fiscale o manuale) e un motivo in
+  testo libero modificabile, entrambi visibili nel pannello dei rilevamenti. Il riepilogo dopo
+  l'esportazione riporta ora un vero e proprio registro di controllo, es. *"12 redazioni
+  applicate: 4 email, 3 IBAN, 5 manuali"*, sia nel flusso interattivo sia in quello batch — non
+  più un semplice conteggio.
+
 ### Versione 1.0
 - 🎉 Prima versione
 - ✅ Redazione immagine con rettangoli a mano libera, annulla/cancella, selettore colore,
@@ -306,5 +336,5 @@ Copyright (c) 2026 Chiara Berti 13
 
 ---
 
-**Document Redaction & Sanitization Studio v1.0**
+**Document Redaction & Sanitization Studio v1.1**
 Di Chiara Berti - 2026

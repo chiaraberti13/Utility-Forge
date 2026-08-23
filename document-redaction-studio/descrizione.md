@@ -180,6 +180,14 @@ e documentato. In concreto:
   Privacy & Security che spiega onestamente i limiti reali della tecnica usata, non solo i suoi
   pregi.
 
+- **Ho evoluto il prodotto in una seconda iterazione (v1.1)** dopo il rilascio iniziale, allineandolo
+  a un design system condiviso con gli altri strumenti della suite (token CSS, tema chiaro/scuro
+  senza mai alterare il contenuto disegnato sui canvas), aggiungendo un pannello globale dei
+  rilevamenti multi-pagina, scorciatoie da tastiera per la revisione (con relativa gestione del
+  focus e annunci per screen reader) e un'etichettatura del motivo di redazione che arricchisce il
+  riepilogo finale in un vero registro di controllo per categoria — mantenendo intatta, e
+  riverificando esplicitamente, la garanzia di zero testo estraibile.
+
 ### Competenze in sintesi
 
 | Area                         | Competenze dimostrate                                                     |
@@ -190,6 +198,7 @@ e documentato. In concreto:
 | **Sicurezza applicativa**    | Content-Security-Policy, DOM XSS-safe, sanificazione filename, verifica post-esportazione |
 | **Algoritmi**                | Rilevamento PII basato su regex, checksum di Luhn, conversione di coordinate matrice→viewport |
 | **UX / Product**             | Editor visuale a doppio canvas, flusso suggerito/confermato, gestione volumi e limiti |
+| **Accessibilità & design system** | Token CSS condivisi, tema chiaro/scuro senza intaccare il contenuto, navigazione e conferma da tastiera, `aria-label`/`aria-live` |
 | **Documentazione**           | Guida utente bilingue, changelog, troubleshooting, dichiarazione onesta dei limiti |
 
 ---
