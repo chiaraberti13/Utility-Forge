@@ -433,6 +433,27 @@
                 </div>
             </div>
 
+            <!-- Rilevamento duplicati (opzionale, separato dal flusso di rinomina) -->
+            <div class="section" id="duplicatesSectionWrap" style="display:none;">
+                <div class="section-title"><i data-lucide="copy-check" size="18" style="color:var(--uf-accent);"></i> Rilevamento duplicati (opzionale)</div>
+                <div class="card">
+                    <div class="upload-hint" style="margin-bottom:12px;">
+                        Calcola l'hash SHA-256 del contenuto di ogni file per trovare copie esattamente identiche —
+                        funzione separata dalla rinomina, non viene mai eseguita automaticamente.
+                    </div>
+                    <div class="actions" style="margin-top:0;">
+                        <button class="btn btn-secondary" id="findDuplicatesBtn" type="button"><i data-lucide="copy-check" size="18"></i> Trova duplicati</button>
+                    </div>
+                    <div id="duplicatesResult" style="margin-top:16px; display:none;">
+                        <div class="upload-hint" id="duplicatesSummary" style="margin-bottom:8px;"></div>
+                        <div id="duplicatesGroups"></div>
+                        <div class="actions">
+                            <button class="btn btn-danger" id="deleteDuplicatesBtn" type="button" disabled><i data-lucide="trash-2" size="18"></i> Elimina le copie selezionate</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Step 2: CSV/XLSX mapping -->
             <div class="section">
                 <div class="section-title"><i data-lucide="table" size="18" style="color:var(--uf-accent);"></i> 2. Mapping da Excel/CSV (opzionale)</div>
@@ -481,6 +502,17 @@
                     <div class="upload-hint" style="margin-top:8px;">
                         Placeholder disponibili: <code>{orig}</code> <code>{ext}</code> <code>{seq}</code>/<code>{seq:000}</code>
                         <code>{date}</code>/<code>{date:YYYYMMDD}</code> <code>{exifdate}</code> <code>{csv:NomeColonna}</code> — combinabili liberamente.
+                    </div>
+                    <div class="field-row" style="margin-top:16px; border-top:1px solid var(--uf-border); padding-top:16px;">
+                        <label for="recipeSelect">Ricette salvate</label>
+                        <select id="recipeSelect" style="min-width:180px;"><option value="">— nessuna —</option></select>
+                        <button class="btn-secondary btn" id="loadRecipeBtn" type="button"><i data-lucide="folder-open" size="16"></i> Carica</button>
+                        <button class="btn-secondary btn" id="deleteRecipeBtn" type="button"><i data-lucide="trash-2" size="16"></i> Elimina</button>
+                    </div>
+                    <div class="field-row">
+                        <label for="recipeNameInput">Nome nuova ricetta</label>
+                        <input type="text" id="recipeNameInput" placeholder="es. Foto evento" style="flex:1; min-width:180px;">
+                        <button class="btn-secondary btn" id="saveRecipeBtn" type="button"><i data-lucide="save" size="16"></i> Salva impostazioni come ricetta</button>
                     </div>
                 </div>
             </div>

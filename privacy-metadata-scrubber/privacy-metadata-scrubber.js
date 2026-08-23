@@ -4,7 +4,7 @@
  * Privacy & Metadata Forensics Studio
  * ------------------------------------------------------------------------------------------
  * All logic lives in this external file (kept out of the HTML) so the page's CSP script-src
- * only has to whitelist 'self' plus the three CDN origins -- no inline-script hash needed.
+ * only has to whitelist 'self' plus the CDN origins -- no inline-script hash needed.
  *
  * Security ground rules followed throughout this file:
  *  - Never use innerHTML or an inline onclick string with data that came from a loaded file.
@@ -16,7 +16,31 @@
  *    app rather than being silently loaded by this page.
  *  - Every filename this script produces (single download or ZIP entry) is sanitized and
  *    de-duplicated before use.
+ *  - The standalone HTML privacy report built in this file is a separate downloadable
+ *    document, not something injected into this page's own DOM, but every value placed into
+ *    it is still HTML-escaped before concatenation, out of the same "never trust file-derived
+ *    content" discipline as the rest of the app.
  * ==========================================================================================*/
+
+// ---------------------------------------------------------------------------------------------
+// Apply a saved theme choice as early as possible, to minimize a light->dark flash. This script
+// tag has no defer/async and sits at the very end of <body>, so this runs synchronously right
+// after the DOM has been parsed but generally before the browser's first paint completes. A
+// strict CSP with no 'unsafe-inline'/hash for scripts rules out an even-earlier inline <script>
+// in <head>, so this is the earliest hook available to an external-file-only script.
+// ---------------------------------------------------------------------------------------------
+
+(function applyStoredThemeEarly() {
+    try {
+        var stored = localStorage.getItem('uf-theme');
+        if (stored === 'dark' || stored === 'light') {
+            document.documentElement.setAttribute('data-theme', stored);
+        }
+    } catch (e) {
+        // localStorage unavailable (private browsing, disabled storage) -- falls back to the
+        // system prefers-color-scheme via the CSS media query, no error surfaced to the user.
+    }
+})();
 
 // ---------------------------------------------------------------------------------------------
 // Constants & limits
@@ -70,6 +94,10 @@ const CATEGORIES = [
 ];
 
 const PROFILES_KEY = 'privacyMetadataScrubberProfiles';
+const THEME_KEY = 'uf-theme';
+
+const ALERT_ICONS = { success: 'check-circle', error: 'alert-circle', warning: 'alert-triangle', info: 'info' };
+const ALERT_DURATIONS = { success: 6000, info: 6000, error: 8000, warning: 8000 };
 
 // ---------------------------------------------------------------------------------------------
 // State
@@ -86,6 +114,7 @@ let els = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     els = {
+        themeToggle: document.getElementById('themeToggle'),
         uploadArea: document.getElementById('uploadArea'),
         fileInput: document.getElementById('fileInput'),
         categoriesGrid: document.getElementById('categoriesGrid'),
@@ -99,23 +128,26 @@ document.addEventListener('DOMContentLoaded', () => {
         scrubbedCount: document.getElementById('scrubbedCount'),
         errorCount: document.getElementById('errorCount'),
         inspectAllBtn: document.getElementById('inspectAllBtn'),
-        scrubAllBtn: document.getElementById('scrubAllBtn'),
         downloadZipBtn: document.getElementById('downloadZipBtn'),
         downloadCsvBtn: document.getElementById('downloadCsvBtn'),
         downloadJsonBtn: document.getElementById('downloadJsonBtn'),
+        downloadHtmlReportBtn: document.getElementById('downloadHtmlReportBtn'),
         clearAllBtn: document.getElementById('clearAllBtn'),
         progressContainer: document.getElementById('progressContainer'),
         progressFill: document.getElementById('progressFill'),
         progressText: document.getElementById('progressText'),
-        successAlert: document.getElementById('successAlert'),
-        successText: document.getElementById('successText'),
-        errorAlert: document.getElementById('errorAlert'),
-        errorText: document.getElementById('errorText'),
-        fileList: document.getElementById('fileList')
+        alertBox: document.getElementById('alertBox'),
+        alertIcon: document.getElementById('alertIcon'),
+        alertText: document.getElementById('alertText'),
+        fileList: document.getElementById('fileList'),
+        queueWrap: document.getElementById('queueWrap'),
+        queueTableBody: document.getElementById('queueTableBody'),
+        scrubConfirmedBtn: document.getElementById('scrubConfirmedBtn')
     };
 
     lucide.createIcons();
 
+    initThemeToggle();
     buildCategoryCheckboxes();
     refreshProfileSelect();
 
@@ -138,10 +170,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     els.inspectAllBtn.addEventListener('click', () => runInspectAll());
-    els.scrubAllBtn.addEventListener('click', () => runScrubAll());
+    els.scrubConfirmedBtn.addEventListener('click', () => runScrubAll());
     els.downloadZipBtn.addEventListener('click', () => downloadZipOfScrubbed());
     els.downloadCsvBtn.addEventListener('click', () => downloadReport('csv'));
     els.downloadJsonBtn.addEventListener('click', () => downloadReport('json'));
+    els.downloadHtmlReportBtn.addEventListener('click', () => downloadReport('html'));
     els.clearAllBtn.addEventListener('click', () => clearAll());
 
     els.saveProfileBtn.addEventListener('click', () => saveCurrentProfile());
@@ -149,7 +182,49 @@ document.addEventListener('DOMContentLoaded', () => {
     els.profileSelect.addEventListener('change', () => applySelectedProfile());
 
     refreshGlobalButtons();
+    renderReviewQueue();
 });
+
+// ---------------------------------------------------------------------------------------------
+// Dark mode toggle
+// ---------------------------------------------------------------------------------------------
+
+function currentTheme() {
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'dark' || attr === 'light') return attr;
+    // No explicit choice stored yet -- reflect the system preference so the icon starts correct.
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+        localStorage.setItem(THEME_KEY, theme);
+    } catch (e) {
+        // Storage unavailable -- the choice just won't persist across reloads this session.
+    }
+    updateThemeToggleUI();
+}
+
+function updateThemeToggleUI() {
+    const theme = currentTheme();
+    // Rebuild the icon node from scratch rather than mutating the (possibly already
+    // lucide-replaced) child, so repeated toggles reliably swap moon <-> sun.
+    while (els.themeToggle.firstChild) els.themeToggle.removeChild(els.themeToggle.firstChild);
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+    icon.setAttribute('size', '18');
+    els.themeToggle.appendChild(icon);
+    els.themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    lucide.createIcons();
+}
+
+function initThemeToggle() {
+    updateThemeToggleUI();
+    els.themeToggle.addEventListener('click', () => {
+        applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+    });
+}
 
 // ---------------------------------------------------------------------------------------------
 // Category checkboxes
@@ -353,6 +428,8 @@ function addFileEntry(file, kind, ext) {
         categoriesRemoved: [],
         scrubBlob: null,
         scrubFilename: null,
+        beforeSnapshot: null,
+        afterSnapshot: null,
         expanded: false
     };
     fileEntries.push(entry);
@@ -380,8 +457,8 @@ function buildFileCard(entry) {
     iconWrap.className = 'file-card-icon';
     const icon = document.createElement('i');
     icon.setAttribute('data-lucide', KIND_ICON[entry.kind] || 'file');
-    icon.setAttribute('size', '18');
-    icon.style.color = '#3b82f6';
+    icon.setAttribute('size', '16');
+    icon.style.color = 'var(--uf-accent)';
     iconWrap.appendChild(icon);
     header.appendChild(iconWrap);
 
@@ -417,7 +494,7 @@ function buildFileCard(entry) {
     const inspectBtn = document.createElement('button');
     inspectBtn.className = 'btn btn-secondary btn-small';
     inspectBtn.type = 'button';
-    inspectBtn.appendChild(iconEl('search', 14));
+    inspectBtn.appendChild(iconEl('search', 18));
     inspectBtn.appendChild(document.createTextNode(' Inspect'));
     inspectBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -428,7 +505,7 @@ function buildFileCard(entry) {
     const scrubBtn = document.createElement('button');
     scrubBtn.className = 'btn btn-small';
     scrubBtn.type = 'button';
-    scrubBtn.appendChild(iconEl('eraser', 14));
+    scrubBtn.appendChild(iconEl('eraser', 18));
     scrubBtn.appendChild(document.createTextNode(' Scrub'));
     scrubBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -440,7 +517,7 @@ function buildFileCard(entry) {
     downloadBtn.className = 'btn btn-secondary btn-small';
     downloadBtn.type = 'button';
     downloadBtn.style.display = 'none';
-    downloadBtn.appendChild(iconEl('download', 14));
+    downloadBtn.appendChild(iconEl('download', 18));
     downloadBtn.appendChild(document.createTextNode(' Download'));
     downloadBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -454,10 +531,14 @@ function buildFileCard(entry) {
     resultsWrap.className = 'results-wrap';
     body.appendChild(resultsWrap);
 
+    const diffWrap = document.createElement('div');
+    diffWrap.className = 'diff-wrap';
+    body.appendChild(diffWrap);
+
     card.appendChild(body);
     els.fileList.appendChild(card);
 
-    entry.el = { card, statusEl, body, resultsWrap, inspectBtn, scrubBtn, downloadBtn };
+    entry.el = { card, statusEl, body, resultsWrap, diffWrap, inspectBtn, scrubBtn, downloadBtn };
     lucide.createIcons();
 }
 
@@ -557,6 +638,11 @@ function badgeRow(container, categories) {
     container.appendChild(row);
 }
 
+function categoryLabel(catId) {
+    const cat = CATEGORIES.find((c) => c.id === catId);
+    return cat ? cat.label : catId;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Byte-level helpers (shared by PDF inspection and general use)
 // ---------------------------------------------------------------------------------------------
@@ -650,7 +736,7 @@ function renderImageInspection(entry) {
 
         const note = document.createElement('div');
         note.style.fontSize = '12px';
-        note.style.color = '#a3a3a3';
+        note.style.color = 'var(--uf-text-muted)';
         note.style.marginBottom = '4px';
         note.textContent = 'This page never loads a map tile or sends these coordinates anywhere. Opening the link below is optional and happens only if you click it, in your own browser.';
         c.appendChild(note);
@@ -1085,6 +1171,14 @@ async function inspectFile(entry) {
     entry.inspected = true;
 }
 
+async function inspectBlobAsPseudoEntry(blob, kind, ext) {
+    const pseudo = { file: blob, kind, ext };
+    if (kind === 'image') return inspectImage(pseudo);
+    if (kind === 'pdf') return inspectPdf(pseudo);
+    if (kind === 'office') return inspectOffice(pseudo);
+    throw new Error('Unknown file kind');
+}
+
 function renderInspection(entry) {
     if (entry.kind === 'image') renderImageInspection(entry);
     else if (entry.kind === 'pdf') renderPdfInspection(entry);
@@ -1113,6 +1207,118 @@ async function scrubFile(entry, categories) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Before / after snapshots (feature: diff view)
+// ---------------------------------------------------------------------------------------------
+// A "snapshot" is an ordered array of [label, displayValue] pairs, using the SAME labels in the
+// same order for a given file kind so a before/after pair can be compared position-by-position.
+// These are deliberately compact summaries (not the full raw tag dump shown in Inspect), so the
+// diff view stays readable even for images that can carry dozens of EXIF tags.
+
+function snapshotImage(inspection) {
+    const gpsText = inspection.gps ? `${inspection.gps.latitude}, ${inspection.gps.longitude}` : '(none found)';
+    const identityKeysPresent = Object.keys(inspection.tags).filter(
+        (k) => IMAGE_IDENTITY_KEYS.includes(k) && String(inspection.tags[k]).trim() !== ''
+    );
+    const otherCount = Object.keys(inspection.tags).filter((k) => !IMAGE_IDENTITY_KEYS.includes(k)).length;
+    return [
+        ['GPS coordinates', gpsText],
+        ['Identity tags (Artist/Copyright/…)', identityKeysPresent.length ? identityKeysPresent.join(', ') : '(none found)'],
+        ['Other EXIF/IPTC/XMP tags found', String(otherCount)]
+    ];
+}
+
+function snapshotPdf(inspection) {
+    const info = inspection.info;
+    return [
+        ['Title', info.Title || '(empty)'],
+        ['Author', info.Author || '(empty)'],
+        ['Subject', info.Subject || '(empty)'],
+        ['Keywords', info.Keywords || '(empty)'],
+        ['Producer', info.Producer || '(empty)'],
+        ['Creator', info.Creator || '(empty)'],
+        ['CreationDate', info.CreationDate || '(empty)'],
+        ['ModificationDate', info.ModificationDate || '(empty)']
+    ];
+}
+
+function snapshotOffice(inspection) {
+    return [
+        ['Creator', inspection.coreProps.creator || '(empty)'],
+        ['Last modified by', inspection.coreProps.lastModifiedBy || '(empty)'],
+        ['Comment parts present', inspection.hasComments ? 'yes' : 'no'],
+        ['Tracked insertions', String(inspection.insCount)],
+        ['Tracked deletions', String(inspection.delCount)]
+    ];
+}
+
+function snapshotFor(kind, inspection) {
+    if (kind === 'image') return snapshotImage(inspection);
+    if (kind === 'pdf') return snapshotPdf(inspection);
+    if (kind === 'office') return snapshotOffice(inspection);
+    return [];
+}
+
+function renderDiff(entry) {
+    const c = entry.el.diffWrap;
+    c.textContent = '';
+    if (!entry.beforeSnapshot || !entry.afterSnapshot) return;
+
+    const label = document.createElement('div');
+    label.className = 'section-label';
+    label.textContent = 'Before / after this scrub';
+    c.appendChild(label);
+
+    const changedRows = [];
+    for (let i = 0; i < entry.beforeSnapshot.length; i++) {
+        const [fieldLabel, beforeVal] = entry.beforeSnapshot[i];
+        const afterVal = entry.afterSnapshot[i] ? entry.afterSnapshot[i][1] : beforeVal;
+        if (beforeVal !== afterVal) changedRows.push([fieldLabel, beforeVal, afterVal]);
+    }
+
+    if (changedRows.length === 0) {
+        const p = document.createElement('div');
+        p.className = 'empty-note';
+        p.textContent = 'No change in these fields — nothing in the selected categories was present in this file, or the scrub was skipped for it.';
+        c.appendChild(p);
+        return;
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'table-scroll';
+    const table = document.createElement('table');
+    table.className = 'meta-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (const h of ['Field', 'Before', 'After']) {
+        const th = document.createElement('th');
+        th.textContent = h;
+        headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for (const [fieldLabel, beforeVal, afterVal] of changedRows) {
+        const tr = document.createElement('tr');
+        const tdField = document.createElement('td');
+        tdField.textContent = fieldLabel;
+        tr.appendChild(tdField);
+        const tdBefore = document.createElement('td');
+        tdBefore.className = 'diff-before';
+        tdBefore.textContent = beforeVal;
+        tr.appendChild(tdBefore);
+        const tdAfter = document.createElement('td');
+        tdAfter.className = 'diff-after';
+        tdAfter.textContent = afterVal;
+        tr.appendChild(tdAfter);
+        tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    c.appendChild(wrap);
+}
+
+// ---------------------------------------------------------------------------------------------
 // Per-file actions
 // ---------------------------------------------------------------------------------------------
 
@@ -1130,7 +1336,7 @@ async function inspectSingle(entry) {
         entry.el.resultsWrap.textContent = '';
         const p = document.createElement('div');
         p.className = 'empty-note';
-        p.style.color = '#dc2626';
+        p.style.color = 'var(--uf-error-text)';
         p.textContent = 'Error: ' + e.message;
         entry.el.resultsWrap.appendChild(p);
         entry.expanded = true;
@@ -1142,16 +1348,26 @@ async function inspectSingle(entry) {
 async function scrubSingle(entry) {
     try {
         if (!entry.inspected) await inspectFile(entry);
+        const beforeSnapshot = snapshotFor(entry.kind, entry.inspection);
         const categories = currentCategories();
         const result = await scrubFile(entry, categories);
         if (result.skipped) {
             setEntryStatus(entry, 'skipped', 'Skipped (no matching category)');
+            entry.el.diffWrap.textContent = '';
         } else {
             entry.scrubBlob = result.blob;
             entry.categoriesRemoved = result.removed;
             entry.scrubFilename = buildScrubFilename(entry);
+            entry.beforeSnapshot = beforeSnapshot;
+            try {
+                const afterInspection = await inspectBlobAsPseudoEntry(result.blob, entry.kind, entry.ext);
+                entry.afterSnapshot = snapshotFor(entry.kind, afterInspection);
+            } catch (e) {
+                entry.afterSnapshot = null; // re-inspection of our own output failed; diff just won't render
+            }
             setEntryStatus(entry, 'scrubbed', 'Scrubbed');
             entry.el.downloadBtn.style.display = 'inline-flex';
+            renderDiff(entry);
         }
         renderInspection(entry);
         entry.expanded = true;
@@ -1187,6 +1403,72 @@ function makeFilenameDeduper() {
         const dot = base.lastIndexOf('.');
         return dot > 0 ? `${base.slice(0, dot)}_${count + 1}${base.slice(dot)}` : `${base}_${count + 1}`;
     };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Review queue (feature: review-then-confirm batch flow)
+// ---------------------------------------------------------------------------------------------
+
+function renderReviewQueue() {
+    if (!els.queueWrap) return;
+    els.queueTableBody.textContent = '';
+
+    if (fileEntries.length === 0) {
+        els.queueWrap.style.display = 'none';
+        els.scrubConfirmedBtn.disabled = true;
+        return;
+    }
+    els.queueWrap.style.display = 'block';
+    els.scrubConfirmedBtn.disabled = false;
+
+    for (const entry of fileEntries) {
+        const tr = document.createElement('tr');
+
+        const tdName = document.createElement('td');
+        tdName.textContent = entry.name;
+        tr.appendChild(tdName);
+
+        const tdType = document.createElement('td');
+        tdType.textContent = KIND_LABEL[entry.kind] || entry.kind;
+        tr.appendChild(tdType);
+
+        const tdSize = document.createElement('td');
+        tdSize.textContent = formatBytes(entry.size);
+        tr.appendChild(tdSize);
+
+        const tdFound = document.createElement('td');
+        if (!entry.inspected) {
+            tdFound.className = 'queue-empty-cell';
+            tdFound.textContent = 'not inspected yet';
+        } else if (entry.categoriesFound.length === 0) {
+            tdFound.className = 'queue-empty-cell';
+            tdFound.textContent = 'none found';
+        } else {
+            tdFound.textContent = entry.categoriesFound.map(categoryLabel).join(', ');
+        }
+        tr.appendChild(tdFound);
+
+        const tdRemoved = document.createElement('td');
+        if (entry.categoriesRemoved.length === 0) {
+            tdRemoved.className = 'queue-empty-cell';
+            tdRemoved.textContent = '—';
+        } else {
+            tdRemoved.textContent = entry.categoriesRemoved.map(categoryLabel).join(', ');
+        }
+        tr.appendChild(tdRemoved);
+
+        const tdStatus = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = 'file-card-status ' + ({
+            pending: 'status-pending', inspected: 'status-inspected', scrubbed: 'status-scrubbed',
+            skipped: 'status-pending', error: 'status-error'
+        }[entry.status] || 'status-pending');
+        pill.textContent = entry.status;
+        tdStatus.appendChild(pill);
+        tr.appendChild(tdStatus);
+
+        els.queueTableBody.appendChild(tr);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1238,18 +1520,18 @@ async function runScrubAll() {
     hideProgress();
     setBatchButtonsDisabled(false);
     const scrubbedCount = fileEntries.filter((e) => e.status === 'scrubbed').length;
-    showAlert('success', `Scrub complete. ${scrubbedCount} of ${fileEntries.length} file(s) produced a new scrubbed copy (others were skipped or errored — see each file's status).`);
+    showAlert('success', `Scrub complete. ${scrubbedCount} of ${fileEntries.length} file(s) produced a new scrubbed copy (others were skipped or errored — see the review queue for details).`);
     updateStatsAndButtons();
 }
 
 function setBatchButtonsDisabled(disabled) {
     els.inspectAllBtn.disabled = disabled;
-    els.scrubAllBtn.disabled = disabled;
+    els.scrubConfirmedBtn.disabled = disabled || fileEntries.length === 0;
     els.clearAllBtn.disabled = disabled;
 }
 
 // ---------------------------------------------------------------------------------------------
-// Downloads: single file, ZIP of scrubbed files, CSV/JSON report
+// Downloads: single file, ZIP of scrubbed files, CSV/JSON/HTML report
 // ---------------------------------------------------------------------------------------------
 
 function downloadBlob(filename, blob) {
@@ -1279,6 +1561,7 @@ async function downloadZipOfScrubbed() {
         const rows = buildSummaryRows();
         zip.file('scrub_report.csv', toCsv(rows));
         zip.file('scrub_report.json', toJson(rows));
+        zip.file('scrub_report.html', buildHtmlReportString(rows));
 
         const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 9 } });
         downloadBlob(`privacy_metadata_scrubbed_${Date.now()}.zip`, blob);
@@ -1292,8 +1575,8 @@ function buildSummaryRows() {
     return fileEntries.map((entry) => ({
         filename: entry.name,
         type: KIND_LABEL[entry.kind] || entry.kind,
-        categoriesFound: entry.categoriesFound.join('; '),
-        categoriesRemoved: entry.categoriesRemoved.join('; '),
+        categoriesFound: entry.categoriesFound.map(categoryLabel).join('; '),
+        categoriesRemoved: entry.categoriesRemoved.map(categoryLabel).join('; '),
         status: entry.status,
         error: entry.error || ''
     }));
@@ -1318,6 +1601,91 @@ function toJson(rows) {
     return JSON.stringify(rows, null, 2);
 }
 
+// ---- Standalone HTML privacy report (feature 2) -------------------------------------------
+// Deliberately lists only WHICH categories were found/removed, not the underlying sensitive
+// values (GPS coordinates, author names, ...) -- a document meant as proof that a privacy pass
+// happened should not itself become a new copy of the sensitive data it is reporting on.
+
+function escapeHtmlText(value) {
+    return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
+function buildHtmlReportString(rows) {
+    const generatedAt = new Date().toISOString();
+    const totalFiles = rows.length;
+    const scrubbedFiles = rows.filter((r) => r.status === 'scrubbed').length;
+
+    const bodyRows = rows.map((r) => `
+        <tr>
+            <td>${escapeHtmlText(r.filename)}</td>
+            <td>${escapeHtmlText(r.type)}</td>
+            <td>${escapeHtmlText(r.categoriesFound || '—')}</td>
+            <td>${escapeHtmlText(r.categoriesRemoved || '—')}</td>
+            <td><span class="pill pill-${escapeHtmlText(r.status)}">${escapeHtmlText(r.status)}</span></td>
+        </tr>`).join('');
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Privacy Scrub Report</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#fafafa; color:#1a1a1a; padding:32px 16px; }
+  .container { max-width: 900px; margin: 0 auto; background:#ffffff; border:1px solid #e5e5e5; border-radius:12px; overflow:hidden; }
+  .header { padding:28px 32px; border-bottom:1px solid #e5e5e5; }
+  h1 { font-size:20px; font-weight:600; margin-bottom:6px; }
+  .meta { color:#737373; font-size:13px; }
+  .content { padding:28px 32px; }
+  .summary { display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap; }
+  .stat { background:#fafafa; border:1px solid #e5e5e5; border-radius:8px; padding:16px 20px; min-width:120px; }
+  .stat .num { font-size:24px; font-weight:600; }
+  .stat .lbl { font-size:12px; color:#737373; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:10px; border-bottom:1px solid #f0f0f0; vertical-align:top; word-break:break-word; }
+  th { color:#737373; font-weight:600; background:#fafafa; }
+  .pill { display:inline-block; font-size:11px; font-weight:500; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .pill-scrubbed { background:#f0fdf4; color:#166534; }
+  .pill-inspected { background:#eff6ff; color:#2563eb; }
+  .pill-error { background:#fef2f2; color:#991b1b; }
+  .pill-skipped, .pill-pending { background:#f5f5f5; color:#737373; }
+  .disclaimer { margin-top:24px; padding:14px 16px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; font-size:12px; color:#92400e; }
+  .footer { padding:20px 32px; text-align:center; color:#a3a3a3; font-size:12px; border-top:1px solid #e5e5e5; background:#fafafa; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Privacy &amp; Metadata Scrub Report</h1>
+      <div class="meta">Generated locally by Privacy &amp; Metadata Forensics Studio on ${escapeHtmlText(generatedAt)}</div>
+    </div>
+    <div class="content">
+      <div class="summary">
+        <div class="stat"><div class="num">${totalFiles}</div><div class="lbl">Files processed</div></div>
+        <div class="stat"><div class="num">${scrubbedFiles}</div><div class="lbl">Scrubbed</div></div>
+      </div>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Type</th><th>Categories found</th><th>Categories removed</th><th>Status</th></tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <div class="disclaimer">
+        This report lists which <em>categories</em> of metadata were found and removed for each
+        file. It deliberately does not reproduce the underlying sensitive values themselves (exact
+        GPS coordinates, author names, etc.) so that a document meant as proof of a privacy pass
+        does not itself become a new copy of the data it is reporting on. Generated entirely in
+        your browser — this report was never uploaded or sent anywhere.
+      </div>
+    </div>
+    <div class="footer">Privacy &amp; Metadata Forensics Studio — Chiara Berti 13</div>
+  </div>
+</body>
+</html>`;
+}
+
 function downloadReport(format) {
     if (fileEntries.length === 0) {
         showAlert('error', 'No files loaded yet.');
@@ -1327,9 +1695,12 @@ function downloadReport(format) {
     if (format === 'csv') {
         const blob = new Blob([toCsv(rows)], { type: 'text/csv' });
         downloadBlob(`scrub_report_${Date.now()}.csv`, blob);
-    } else {
+    } else if (format === 'json') {
         const blob = new Blob([toJson(rows)], { type: 'application/json' });
         downloadBlob(`scrub_report_${Date.now()}.json`, blob);
+    } else if (format === 'html') {
+        const blob = new Blob([buildHtmlReportString(rows)], { type: 'text/html' });
+        downloadBlob(`privacy_report_${Date.now()}.html`, blob);
     }
 }
 
@@ -1349,16 +1720,18 @@ function updateStatsAndButtons() {
     els.errorCount.textContent = String(errors);
 
     refreshGlobalButtons();
+    renderReviewQueue();
 }
 
 function refreshGlobalButtons() {
     const total = fileEntries.length;
     const scrubbed = fileEntries.filter((e) => e.status === 'scrubbed').length;
     els.inspectAllBtn.disabled = total === 0;
-    els.scrubAllBtn.disabled = total === 0;
+    els.scrubConfirmedBtn.disabled = total === 0;
     els.downloadZipBtn.disabled = scrubbed === 0;
     els.downloadCsvBtn.disabled = total === 0;
     els.downloadJsonBtn.disabled = total === 0;
+    els.downloadHtmlReportBtn.disabled = total === 0;
 }
 
 function clearAll() {
@@ -1371,23 +1744,33 @@ function clearAll() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Alerts
+// Unified alert component
 // ---------------------------------------------------------------------------------------------
 
-let successTimer = null;
-let errorTimer = null;
+let alertTimer = null;
 
 function showAlert(type, message) {
-    if (type === 'success') {
-        els.successText.textContent = message;
-        els.successAlert.style.display = 'flex';
-        if (successTimer) clearTimeout(successTimer);
-        successTimer = setTimeout(() => { els.successAlert.style.display = 'none'; }, 6000);
-    } else {
-        els.errorText.textContent = message;
-        els.errorAlert.style.display = 'flex';
-        if (errorTimer) clearTimeout(errorTimer);
-        errorTimer = setTimeout(() => { els.errorAlert.style.display = 'none'; }, 8000);
-    }
+    const kind = ALERT_ICONS[type] ? type : 'info';
+
+    els.alertBox.className = 'alert alert-' + kind + ' show';
+
+    // Rebuild the icon node rather than mutate a possibly lucide-replaced element, same
+    // reasoning as the theme toggle icon swap above.
+    const oldIcon = document.getElementById('alertIcon');
+    if (oldIcon) oldIcon.remove();
+    const icon = document.createElement('i');
+    icon.id = 'alertIcon';
+    icon.setAttribute('data-lucide', ALERT_ICONS[kind]);
+    icon.setAttribute('size', '18');
+    els.alertBox.insertBefore(icon, els.alertText);
+
+    els.alertText.textContent = message;
+
     lucide.createIcons();
+
+    if (alertTimer) clearTimeout(alertTimer);
+    const duration = ALERT_DURATIONS[kind] || 6000;
+    alertTimer = setTimeout(() => {
+        els.alertBox.classList.remove('show');
+    }, duration);
 }

@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>Privacy & Metadata Forensics Studio</title>
 
     <!--
         Security note: this file is single-purpose (no server, no cookies/session), so the main
-        attack surface is parsing untrusted images/PDF/Office files and the three CDN libraries
+        attack surface is parsing untrusted images/PDF/Office files and the four CDN libraries
         loaded below. All the JavaScript logic lives in the separate privacy-metadata-scrubber.js
         file (loaded with a plain relative <script src>, which works fine over file:// exactly like
-        loading a local image would), so the CSP script-src below only needs 'self' plus the three
-        CDN origins -- no inline-script hash to compute or keep in sync, unlike the older single-file
+        loading a local image would), so the CSP script-src below only needs 'self' plus the CDN
+        origins -- no inline-script hash to compute or keep in sync, unlike the older single-file
         pattern used by the barcode tool. Every value derived from an uploaded file is written to the
         DOM with textContent and DOM node creation only, never innerHTML or an inline onclick string,
         and GPS coordinates found in EXIF are shown as plain decimal text only -- this app never
         fetches a map tile or any other network resource on your behalf, so a location embedded in a
-        photo is never silently leaked to a third-party server.
+        photo is never silently leaked to a third-party server. The dark-mode toggle and alert
+        component added in v1.1 are pure CSS/DOM state (a `data-theme` attribute plus a localStorage
+        preference) and introduce no new network origins, so the CSP is unchanged from v1.0.
     -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 
@@ -39,40 +42,131 @@
             box-sizing: border-box;
         }
 
+        /* ============================================================================
+         * Utility Forge shared design-system tokens (identical across all tools in the
+         * suite). Light values live on bare :root; dark values are redefined once under
+         * prefers-color-scheme for users who haven't made an explicit choice, and again
+         * under [data-theme="dark"] so the manual toggle always wins over the system
+         * setting in both directions.
+         * ==========================================================================*/
+        :root {
+            --uf-bg:#fafafa; --uf-card-bg:#ffffff; --uf-border:#e5e5e5; --uf-text:#1a1a1a; --uf-text-muted:#737373;
+            --uf-accent:#3b82f6; --uf-accent-hover:#2563eb; --uf-accent-soft:#f0f9ff; --uf-accent-softer:#eff6ff; --uf-dragover-bg:#dbeafe;
+            --uf-success-bg:#f0fdf4; --uf-success-border:#bbf7d0; --uf-success-text:#166534;
+            --uf-error-bg:#fef2f2; --uf-error-border:#fecaca; --uf-error-text:#991b1b;
+            --uf-warning-bg:#fffbeb; --uf-warning-border:#fde68a; --uf-warning-text:#92400e;
+            --uf-info-bg:#eff6ff; --uf-info-border:#bfdbfe; --uf-info-text:#1e40af;
+            --uf-progress-track:#f5f5f5; --uf-upload-border:#d4d4d4;
+            --uf-accent-contrast:#ffffff;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+                --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+                --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+                --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+                --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+                --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+                --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+                --uf-accent-contrast:#0b1220;
+            }
+            :root:not([data-theme="light"]) { color-scheme: dark; }
+        }
+        :root[data-theme="dark"] {
+            --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+            --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+            --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+            --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+            --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+            --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+            --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+            --uf-accent-contrast:#0b1220;
+            color-scheme: dark;
+        }
+        :root[data-theme="light"] { color-scheme: light; }
+
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--uf-accent); outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: 1px solid var(--uf-border);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--uf-text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .icon-btn:hover { background: var(--uf-accent-soft); color: var(--uf-accent); border-color: var(--uf-accent); }
+
+        /* Unified alert component */
+        .alert {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 20px;
+            border: 1px solid transparent;
+        }
+        .alert.show { display: flex; }
+        .alert-success { background: var(--uf-success-bg); border-color: var(--uf-success-border); color: var(--uf-success-text); }
+        .alert-error { background: var(--uf-error-bg); border-color: var(--uf-error-border); color: var(--uf-error-text); }
+        .alert-warning { background: var(--uf-warning-bg); border-color: var(--uf-warning-border); color: var(--uf-warning-text); }
+        .alert-info { background: var(--uf-info-bg); border-color: var(--uf-info-border); color: var(--uf-info-text); }
+        .alert svg, .alert i { flex-shrink: 0; }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--uf-bg);
             min-height: 100vh;
             padding: 16px;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .container {
             max-width: 980px;
             margin: 0 auto;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             overflow: hidden;
         }
 
         .header {
             padding: 32px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--uf-border);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
         }
 
         h1 {
             font-size: 24px;
             font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 8px;
+            color: var(--uf-text);
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
         .subtitle {
-            color: #737373;
+            color: var(--uf-text-muted);
             font-size: 15px;
             font-weight: 400;
             line-height: 1.5;
@@ -89,7 +183,7 @@
         h2 {
             font-size: 15px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 12px;
             display: flex;
             align-items: center;
@@ -97,23 +191,23 @@
         }
 
         .upload-area {
-            border: 2px dashed #d4d4d4;
+            border: 2px dashed var(--uf-upload-border);
             border-radius: 8px;
             padding: 48px 24px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
 
         .upload-area:hover {
-            border-color: #3b82f6;
-            background: #f0f9ff;
+            border-color: var(--uf-accent);
+            background: var(--uf-accent-soft);
         }
 
         .upload-area.dragover {
-            border-color: #3b82f6;
-            background: #dbeafe;
+            border-color: var(--uf-accent);
+            background: var(--uf-dragover-bg);
             border-style: solid;
         }
 
@@ -123,26 +217,31 @@
             justify-content: center;
             width: 64px;
             height: 64px;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             margin-bottom: 16px;
         }
 
         .upload-text {
             font-size: 16px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 8px;
         }
 
         .upload-hint {
             font-size: 14px;
-            color: #737373;
+            color: var(--uf-text-muted);
         }
 
         #fileInput {
-            display: none;
+            /* visually hidden but still focusable/labelled for assistive tech, unlike display:none */
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0,0,0,0);
+            white-space: nowrap; border: 0;
         }
 
         /* Profiles bar */
@@ -152,14 +251,14 @@
             align-items: center;
             gap: 10px;
             padding: 16px;
-            background: #fafafa;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
         }
 
         .profiles-bar label {
             font-size: 13px;
-            color: #737373;
+            color: var(--uf-text-muted);
         }
 
         select, input[type="text"] {
@@ -167,14 +266,14 @@
             font-size: 13px;
             padding: 8px 10px;
             border-radius: 6px;
-            border: 1px solid #d4d4d4;
-            background: white;
-            color: #1a1a1a;
+            border: 1px solid var(--uf-upload-border);
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
         }
 
         select:focus, input[type="text"]:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: var(--uf-accent);
         }
 
         /* Category checkboxes */
@@ -189,21 +288,21 @@
             align-items: flex-start;
             gap: 10px;
             padding: 12px 14px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
-            background: #fafafa;
+            background: var(--uf-bg);
             cursor: pointer;
         }
 
         .category-item:hover {
-            border-color: #d4d4d4;
+            border-color: var(--uf-upload-border);
         }
 
         .category-item input[type="checkbox"] {
             margin-top: 3px;
             width: 16px;
             height: 16px;
-            accent-color: #3b82f6;
+            accent-color: var(--uf-accent);
             flex-shrink: 0;
         }
 
@@ -211,12 +310,12 @@
             display: block;
             font-size: 13px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .category-text span {
             font-size: 12px;
-            color: #737373;
+            color: var(--uf-text-muted);
         }
 
         .actions {
@@ -230,8 +329,8 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #3b82f6;
-            color: white;
+            background: var(--uf-accent);
+            color: var(--uf-accent-contrast);
             border: none;
             padding: 12px 20px;
             border-radius: 8px;
@@ -244,7 +343,7 @@
         }
 
         .btn:hover {
-            background: #2563eb;
+            background: var(--uf-accent-hover);
         }
 
         .btn:active {
@@ -252,25 +351,25 @@
         }
 
         .btn:disabled {
-            background: #e5e5e5;
-            color: #a3a3a3;
+            background: var(--uf-border);
+            color: var(--uf-text-muted);
             cursor: not-allowed;
         }
 
         .btn-secondary {
-            background: white;
-            color: #1a1a1a;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
+            border: 1px solid var(--uf-border);
         }
 
         .btn-secondary:hover {
-            background: #fafafa;
-            border-color: #d4d4d4;
+            background: var(--uf-bg);
+            border-color: var(--uf-upload-border);
         }
 
         .btn-secondary:disabled {
-            background: white;
-            color: #d4d4d4;
+            background: var(--uf-card-bg);
+            color: var(--uf-upload-border);
         }
 
         .btn-small {
@@ -286,7 +385,7 @@
         .progress-bar {
             width: 100%;
             height: 8px;
-            background: #f5f5f5;
+            background: var(--uf-progress-track);
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 8px;
@@ -294,7 +393,7 @@
 
         .progress-fill {
             height: 100%;
-            background: #3b82f6;
+            background: var(--uf-accent);
             width: 0%;
             transition: width 0.3s ease;
             border-radius: 4px;
@@ -302,7 +401,7 @@
 
         .progress-text {
             font-size: 13px;
-            color: #737373;
+            color: var(--uf-text-muted);
             text-align: center;
         }
 
@@ -310,9 +409,9 @@
             display: none;
             margin-top: 20px;
             padding: 20px;
-            background: #fafafa;
+            background: var(--uf-bg);
             border-radius: 8px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
         }
 
         .stats-grid {
@@ -328,13 +427,13 @@
         .stat-number {
             font-size: 26px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 4px;
         }
 
         .stat-label {
             font-size: 12px;
-            color: #737373;
+            color: var(--uf-text-muted);
             font-weight: 400;
         }
 
@@ -344,11 +443,11 @@
         }
 
         .file-card {
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             margin-bottom: 12px;
             overflow: hidden;
-            background: white;
+            background: var(--uf-card-bg);
         }
 
         .file-card-header {
@@ -356,8 +455,8 @@
             align-items: center;
             gap: 12px;
             padding: 14px 16px;
-            background: #fafafa;
-            border-bottom: 1px solid #e5e5e5;
+            background: var(--uf-bg);
+            border-bottom: 1px solid var(--uf-border);
             cursor: pointer;
         }
 
@@ -368,8 +467,8 @@
             width: 36px;
             height: 36px;
             border-radius: 8px;
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             flex-shrink: 0;
         }
 
@@ -381,7 +480,7 @@
         .file-card-name {
             font-size: 14px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -389,7 +488,7 @@
 
         .file-card-meta {
             font-size: 12px;
-            color: #737373;
+            color: var(--uf-text-muted);
             margin-top: 2px;
         }
 
@@ -402,10 +501,10 @@
             flex-shrink: 0;
         }
 
-        .status-pending { background: #f5f5f5; color: #737373; }
-        .status-inspected { background: #eff6ff; color: #2563eb; }
-        .status-scrubbed { background: #f0fdf4; color: #15803d; }
-        .status-error { background: #fef2f2; color: #dc2626; }
+        .status-pending { background: var(--uf-progress-track); color: var(--uf-text-muted); }
+        .status-inspected { background: var(--uf-accent-softer); color: var(--uf-accent-hover); }
+        .status-scrubbed { background: var(--uf-success-bg); color: var(--uf-success-text); }
+        .status-error { background: var(--uf-error-bg); color: var(--uf-error-text); }
 
         .file-card-body {
             display: none;
@@ -433,21 +532,29 @@
         table.meta-table th, table.meta-table td {
             text-align: left;
             padding: 8px 10px;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--uf-border);
             vertical-align: top;
             word-break: break-word;
         }
 
         table.meta-table th {
-            color: #737373;
+            color: var(--uf-text-muted);
             font-weight: 500;
             width: 220px;
+        }
+
+        table.meta-table thead th {
+            width: auto;
+            font-weight: 600;
         }
 
         table.meta-table tr:last-child th,
         table.meta-table tr:last-child td {
             border-bottom: none;
         }
+
+        .diff-before { color: var(--uf-error-text); text-decoration: line-through; }
+        .diff-after { color: var(--uf-success-text); font-weight: 500; }
 
         .table-scroll {
             overflow-x: auto;
@@ -458,29 +565,29 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: #a3a3a3;
+            color: var(--uf-text-muted);
             margin: 14px 0 8px;
         }
 
         .empty-note {
             font-size: 13px;
-            color: #a3a3a3;
+            color: var(--uf-text-muted);
             font-style: italic;
             margin-bottom: 10px;
         }
 
         .heuristic-note {
             font-size: 12px;
-            color: #737373;
-            background: #fffbeb;
-            border: 1px solid #fde68a;
+            color: var(--uf-warning-text);
+            background: var(--uf-warning-bg);
+            border: 1px solid var(--uf-warning-border);
             border-radius: 6px;
             padding: 10px 12px;
             margin-bottom: 10px;
         }
 
         .gps-link {
-            color: #3b82f6;
+            color: var(--uf-accent);
             text-decoration: none;
             font-size: 12px;
         }
@@ -489,35 +596,13 @@
             text-decoration: underline;
         }
 
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .alert-success {
-            background: #f0fdf4;
-            color: #15803d;
-            border: 1px solid #bbf7d0;
-        }
-
-        .alert-error {
-            background: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
-
         .footer {
             padding: 24px 32px;
             text-align: center;
-            color: #a3a3a3;
+            color: var(--uf-text-muted);
             font-size: 13px;
-            border-top: 1px solid #e5e5e5;
-            background: #fafafa;
+            border-top: 1px solid var(--uf-border);
+            background: var(--uf-bg);
         }
 
         .badge {
@@ -526,14 +611,39 @@
             font-weight: 500;
             padding: 2px 8px;
             border-radius: 999px;
-            background: #eff6ff;
-            color: #2563eb;
+            background: var(--uf-accent-softer);
+            color: var(--uf-accent-hover);
             margin-right: 6px;
+            margin-bottom: 4px;
+        }
+
+        /* Review queue */
+        .queue-wrap {
+            display: none;
+        }
+
+        .queue-empty-cell {
+            color: var(--uf-text-muted);
+            font-style: italic;
+        }
+
+        .queue-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 14px;
+        }
+
+        .queue-hint {
+            font-size: 12px;
+            color: var(--uf-text-muted);
         }
 
         /* Responsive */
-        @media (max-width: 640px) {
+        @media (max-width: 680px) {
             .header { padding: 24px 20px; }
+            .header-top { flex-wrap: wrap; }
             .content { padding: 20px; }
             h1 { font-size: 20px; }
             .subtitle { font-size: 14px; }
@@ -552,10 +662,15 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>
-                <i data-lucide="shield-check" style="color: #3b82f6;"></i>
-                Privacy & Metadata Forensics Studio
-            </h1>
+            <div class="header-top">
+                <h1>
+                    <i data-lucide="shield-check" size="20" style="color: var(--uf-accent);"></i>
+                    Privacy & Metadata Forensics Studio
+                </h1>
+                <button class="icon-btn" id="themeToggle" type="button" aria-label="Switch to dark theme" title="Light / dark theme">
+                    <i data-lucide="moon" size="18"></i>
+                </button>
+            </div>
             <p class="subtitle">
                 It doesn't just strip EXIF like the typical free tool — it inspects and lets you
                 selectively scrub hidden metadata across images, PDFs, and Office documents, entirely
@@ -565,34 +680,36 @@
 
         <div class="content">
             <section>
-                <h2><i data-lucide="sliders-horizontal" size="16" style="color:#3b82f6;"></i> Scrub profile</h2>
+                <h2><i data-lucide="sliders-horizontal" size="16" style="color:var(--uf-accent);"></i> Scrub profile</h2>
                 <div class="profiles-bar">
                     <label for="profileSelect">Saved profile</label>
                     <select id="profileSelect">
                         <option value="">— none (custom selection) —</option>
                     </select>
                     <button class="btn btn-secondary btn-small" id="deleteProfileBtn" type="button">
-                        <i data-lucide="trash-2" size="14"></i> Delete
+                        <i data-lucide="trash-2" size="18"></i> Delete
                     </button>
+                    <label for="profileNameInput" class="sr-only">Profile name</label>
                     <input type="text" id="profileNameInput" placeholder="Profile name" style="flex:1; min-width:140px;">
                     <button class="btn btn-secondary btn-small" id="saveProfileBtn" type="button">
-                        <i data-lucide="save" size="14"></i> Save current selection
+                        <i data-lucide="save" size="18"></i> Save current selection
                     </button>
                 </div>
             </section>
 
             <section>
-                <h2><i data-lucide="list-checks" size="16" style="color:#3b82f6;"></i> What to remove</h2>
+                <h2><i data-lucide="list-checks" size="16" style="color:var(--uf-accent);"></i> What to remove</h2>
                 <div class="categories" id="categoriesGrid">
                     <!-- populated by JS -->
                 </div>
             </section>
 
             <section>
-                <h2><i data-lucide="upload-cloud" size="16" style="color:#3b82f6;"></i> Files</h2>
+                <h2><i data-lucide="upload-cloud" size="16" style="color:var(--uf-accent);"></i> Files</h2>
+                <label for="fileInput" class="sr-only">Choose image, PDF or Office files to upload</label>
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">
-                        <i data-lucide="upload" size="32" stroke-width="1.5" style="color: #3b82f6;"></i>
+                        <i data-lucide="upload" size="36" stroke-width="1.5" style="color: var(--uf-accent);"></i>
                     </div>
                     <div class="upload-text">Drag files here or click to select</div>
                     <div class="upload-hint">Images (JPEG, PNG, WEBP), PDF, Word/Excel/PowerPoint (.docx, .xlsx, .pptx) — up to 50MB each, 200 files per batch</div>
@@ -624,9 +741,6 @@
                     <button class="btn" id="inspectAllBtn" disabled>
                         <i data-lucide="search" size="18"></i> Inspect all
                     </button>
-                    <button class="btn" id="scrubAllBtn" disabled>
-                        <i data-lucide="eraser" size="18"></i> Scrub all
-                    </button>
                     <button class="btn btn-secondary" id="downloadZipBtn" disabled>
                         <i data-lucide="package" size="18"></i> Download ZIP of scrubbed files
                     </button>
@@ -635,6 +749,9 @@
                     </button>
                     <button class="btn btn-secondary" id="downloadJsonBtn" disabled>
                         <i data-lucide="file-json" size="18"></i> Report (JSON)
+                    </button>
+                    <button class="btn btn-secondary" id="downloadHtmlReportBtn" disabled>
+                        <i data-lucide="file-text" size="18"></i> Privacy Report (HTML)
                     </button>
                     <button class="btn btn-secondary" id="clearAllBtn">
                         <i data-lucide="x" size="18"></i> Clear all
@@ -648,22 +765,47 @@
                     <div class="progress-text" id="progressText">0 / 0</div>
                 </div>
 
-                <div class="alert alert-success" id="successAlert">
-                    <i data-lucide="check-circle" size="20"></i>
-                    <span id="successText"></span>
-                </div>
-                <div class="alert alert-error" id="errorAlert">
-                    <i data-lucide="alert-circle" size="20"></i>
-                    <span id="errorText"></span>
+                <div class="alert" id="alertBox" role="status" aria-live="polite">
+                    <i data-lucide="check-circle" size="18" id="alertIcon"></i>
+                    <span id="alertText"></span>
                 </div>
 
                 <div class="file-list" id="fileList"></div>
+            </section>
+
+            <section class="queue-wrap" id="queueWrap">
+                <h2><i data-lucide="list-todo" size="16" style="color:var(--uf-accent);"></i> Review queue</h2>
+                <p class="queue-hint">
+                    Every loaded file, with what Inspect found in it so far. Review this before running
+                    a confirmed batch scrub — nothing here is modified until you click the button below.
+                </p>
+                <div class="table-scroll">
+                    <table class="meta-table" id="queueTable">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Found</th>
+                                <th>Removed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="queueTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="queue-actions">
+                    <button class="btn" id="scrubConfirmedBtn" disabled>
+                        <i data-lucide="shield-check" size="18"></i> Scrub all confirmed
+                    </button>
+                    <span class="queue-hint">Uses the categories checked above. Files not yet inspected are inspected automatically first.</span>
+                </div>
             </section>
         </div>
 
         <div class="footer">
             <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
-            <div style="color: #d4d4d4;">All parsing and scrubbing happens locally in your browser. Nothing is ever uploaded.</div>
+            <div>All parsing and scrubbing happens locally in your browser. Nothing is ever uploaded.</div>
         </div>
     </div>
 

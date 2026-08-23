@@ -291,6 +291,36 @@ You can share the whole folder with colleagues:
 
 ## 📝 CHANGELOG
 
+### Version 1.1 (Current) — Design system, dark mode & completeness pass
+- 🎨 Adopted the shared Utility Forge design-system tokens (CSS custom properties for
+  background/card/border/text/accent/success/error/warning/info/progress-track colors) so this
+  tool now looks and behaves identically to the rest of the suite
+- 🌙 **Dark mode**: a header toggle switches between light and dark themes, remembered in
+  `localStorage` and re-applied as early as this external-script-only page can manage (right when
+  `privacy-metadata-scrubber.js` executes, before the rest of the UI is built) to minimize a
+  light→dark flash; falls back to your OS's `prefers-color-scheme` when you haven't chosen
+- 🔔 Unified alert component (`role="status" aria-live="polite"`, success/error/warning/info
+  variants, auto-dismiss after 6s for success/info and 8s for error/warning) replacing the two
+  separate success/error boxes from v1.0
+- ♿ Accessibility pass: visible focus rings on every interactive element, `aria-label` on the new
+  icon-only theme toggle, an explicit (visually-hidden where redundant with a placeholder) `<label>`
+  for every `<input>`, standardized icon sizing (20px header icon, 18px button icons, 16px inline/
+  list icons, 36px empty-state icon)
+- 📱 Responsive breakpoint standardized to `680px` to match the rest of the suite
+- ✅ **New: Review queue** — a summary table of every loaded file with its detected categories,
+  visible before you commit to a batch scrub, with its own "Scrub all confirmed" action (files not
+  yet inspected are inspected automatically first)
+- ✅ **New: downloadable HTML privacy report** — alongside the existing CSV/JSON export, a
+  "Privacy Report (HTML)" button produces a self-contained, styled standalone report suitable to
+  hand to a client as evidence a privacy pass was done. It deliberately lists only which
+  *categories* were found/removed per file, not the underlying sensitive values, so the proof
+  document doesn't become a new copy of the data it's reporting on. Also bundled automatically
+  into the batch ZIP as `scrub_report.html`
+- ✅ **New: before/after diff view** — after scrubbing a file, its card shows a compact table of
+  exactly which metadata fields changed, comparing the original file's Inspect results against a
+  fresh Inspect pass run on the actual scrubbed output (not a prediction), so you can confirm what
+  changed without downloading and re-inspecting the result separately
+
 ### Version 1.0
 - 🎉 First release
 - ✅ Inspect: EXIF/GPS/IPTC/XMP for images (exifr), PDF Info dictionary + heuristic byte scan
@@ -319,5 +349,5 @@ Copyright (c) 2026 Chiara Berti 13
 
 ---
 
-**Privacy & Metadata Forensics Studio v1.0**
+**Privacy & Metadata Forensics Studio v1.1**
 By Chiara Berti - 2026
