@@ -42,11 +42,46 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        :root {
+            --uf-bg:#fafafa; --uf-card-bg:#ffffff; --uf-border:#e5e5e5; --uf-text:#1a1a1a; --uf-text-muted:#737373;
+            --uf-accent:#3b82f6; --uf-accent-hover:#2563eb; --uf-accent-soft:#f0f9ff; --uf-accent-softer:#eff6ff; --uf-dragover-bg:#dbeafe;
+            --uf-success-bg:#f0fdf4; --uf-success-border:#bbf7d0; --uf-success-text:#166534;
+            --uf-error-bg:#fef2f2; --uf-error-border:#fecaca; --uf-error-text:#991b1b;
+            --uf-warning-bg:#fffbeb; --uf-warning-border:#fde68a; --uf-warning-text:#92400e;
+            --uf-info-bg:#eff6ff; --uf-info-border:#bfdbfe; --uf-info-text:#1e40af;
+            --uf-progress-track:#f5f5f5; --uf-upload-border:#d4d4d4;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+                --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+                --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+                --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+                --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+                --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+                --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+            }
+        }
+        :root[data-theme="dark"] {
+            --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+            --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+            --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+            --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+            --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+            --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+            --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--uf-accent); outline-offset: 2px;
+        }
+        .icon-btn { background:transparent; border:1px solid var(--uf-border); border-radius:8px; padding:8px; cursor:pointer; color:var(--uf-text-muted); display:inline-flex; align-items:center; justify-content:center; }
+        .icon-btn:hover { background:var(--uf-accent-soft); color:var(--uf-accent); border-color:var(--uf-accent); }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--uf-bg);
             min-height: 100vh;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .app {
@@ -56,8 +91,8 @@
         }
 
         .header {
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 12px;
             padding: 28px 32px;
             margin-bottom: 16px;
@@ -72,7 +107,7 @@
             margin-bottom: 6px;
         }
 
-        .subtitle { color: #737373; font-size: 15px; }
+        .subtitle { color: var(--uf-text-muted); font-size: 15px; }
 
         .shell {
             display: grid;
@@ -82,8 +117,8 @@
         }
 
         .sidenav {
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 12px;
             padding: 8px;
             position: sticky;
@@ -105,23 +140,23 @@
             border-radius: 8px;
             font-size: 14px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             cursor: pointer;
         }
 
-        .nav-btn:hover { background: #f5f5f5; }
+        .nav-btn:hover { background: var(--uf-progress-track); }
 
-        .nav-btn.active { background: #eff6ff; color: #3b82f6; }
+        .nav-btn.active { background: var(--uf-accent-softer); color: var(--uf-accent); }
 
-        .nav-btn .lucide, .nav-btn svg { flex-shrink: 0; color: #737373; }
-        .nav-btn.active svg { color: #3b82f6; }
+        .nav-btn .lucide, .nav-btn svg { flex-shrink: 0; color: var(--uf-text-muted); }
+        .nav-btn.active svg { color: var(--uf-accent); }
 
         .panels { min-width: 0; }
 
         .panel {
             display: none;
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 12px;
             overflow: hidden;
         }
@@ -130,7 +165,7 @@
 
         .panel-header {
             padding: 24px 28px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--uf-border);
         }
 
         .panel-header h2 {
@@ -142,7 +177,7 @@
             margin-bottom: 4px;
         }
 
-        .panel-desc { color: #737373; font-size: 14px; }
+        .panel-desc { color: var(--uf-text-muted); font-size: 14px; }
 
         .panel-body { padding: 24px 28px; }
 
@@ -150,9 +185,9 @@
             display: flex;
             gap: 10px;
             align-items: flex-start;
-            background: #fffbeb;
-            border: 1px solid #fde68a;
-            color: #92400e;
+            background: var(--uf-warning-bg);
+            border: 1px solid var(--uf-warning-border);
+            color: var(--uf-warning-text);
             border-radius: 8px;
             padding: 12px 16px;
             font-size: 13px;
@@ -160,24 +195,24 @@
         }
 
         .notice.info {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-            color: #1d4ed8;
+            background: var(--uf-info-bg);
+            border-color: var(--uf-info-border);
+            color: var(--uf-info-text);
         }
 
         .notice svg { flex-shrink: 0; margin-top: 1px; }
 
         .upload-area {
-            border: 2px dashed #d4d4d4;
+            border: 2px dashed var(--uf-upload-border);
             border-radius: 8px;
             padding: 32px 20px;
             text-align: center;
             cursor: pointer;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
 
-        .upload-area:hover { border-color: #3b82f6; background: #f0f9ff; }
-        .upload-area.dragover { border-color: #3b82f6; background: #dbeafe; border-style: solid; }
+        .upload-area:hover { border-color: var(--uf-accent); background: var(--uf-accent-soft); }
+        .upload-area.dragover { border-color: var(--uf-accent); background: var(--uf-dragover-bg); border-style: solid; }
 
         .upload-icon {
             display: inline-flex;
@@ -185,45 +220,44 @@
             justify-content: center;
             width: 48px;
             height: 48px;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 10px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             margin-bottom: 12px;
         }
 
         .upload-text { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-        .upload-hint { font-size: 13px; color: #737373; }
+        .upload-hint { font-size: 13px; color: var(--uf-text-muted); }
 
         input[type="file"] { display: none; }
 
         .field-row { margin-top: 18px; }
-        .field-row label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #1a1a1a; }
-        .field-hint { font-size: 12px; color: #737373; margin-top: 4px; }
+        .field-row label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--uf-text); }
+        .field-hint { font-size: 12px; color: var(--uf-text-muted); margin-top: 4px; }
 
         .field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-top: 18px; }
 
         input[type="text"], input[type="number"], select, textarea {
             width: 100%;
             padding: 9px 12px;
-            border: 1px solid #d4d4d4;
+            border: 1px solid var(--uf-upload-border);
             border-radius: 8px;
             font-size: 14px;
             font-family: inherit;
-            background: white;
-            color: #1a1a1a;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
         }
 
         input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
+            border-color: var(--uf-accent);
         }
 
-        input[type="range"] { width: 100%; accent-color: #3b82f6; }
+        input[type="range"] { width: 100%; accent-color: var(--uf-accent); }
 
-        .range-value { font-size: 12px; color: #737373; font-family: 'SF Mono', Monaco, monospace; }
+        .range-value { font-size: 12px; color: var(--uf-text-muted); font-family: 'SF Mono', Monaco, monospace; }
 
         .checkbox-row { display: flex; align-items: center; gap: 8px; }
-        .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #3b82f6; }
+        .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--uf-accent); }
         .checkbox-row label { margin: 0; font-size: 13px; font-weight: 500; }
 
         .actions { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
@@ -232,7 +266,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #3b82f6;
+            background: var(--uf-accent);
             color: white;
             border: none;
             padding: 11px 18px;
@@ -242,11 +276,11 @@
             cursor: pointer;
         }
 
-        .btn:hover { background: #2563eb; }
-        .btn:disabled { background: #e5e5e5; color: #a3a3a3; cursor: not-allowed; }
+        .btn:hover { background: var(--uf-accent-hover); }
+        .btn:disabled { background: var(--uf-border); color: #a3a3a3; cursor: not-allowed; }
 
-        .btn-secondary { background: white; color: #1a1a1a; border: 1px solid #e5e5e5; }
-        .btn-secondary:hover { background: #fafafa; border-color: #d4d4d4; }
+        .btn-secondary { background: var(--uf-card-bg); color: var(--uf-text); border: 1px solid var(--uf-border); }
+        .btn-secondary:hover { background: var(--uf-bg); border-color: var(--uf-upload-border); }
 
         .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 6px; }
 
@@ -256,14 +290,14 @@
             justify-content: center;
             width: 30px;
             height: 30px;
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 6px;
             cursor: pointer;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
-        .btn-icon:hover { background: #fafafa; border-color: #d4d4d4; }
-        .btn-icon:disabled { color: #d4d4d4; cursor: not-allowed; }
+        .btn-icon:hover { background: var(--uf-bg); border-color: var(--uf-upload-border); }
+        .btn-icon:disabled { color: var(--uf-upload-border); cursor: not-allowed; }
 
         .file-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -272,29 +306,29 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
 
         .file-row .file-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .file-row .file-meta { font-size: 12px; color: #737373; }
+        .file-row .file-meta { font-size: 12px; color: var(--uf-text-muted); }
         .file-row .file-controls { display: flex; gap: 4px; }
 
         .progress-container { display: none; margin-top: 20px; }
-        .progress-bar { width: 100%; height: 8px; background: #f5f5f5; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
-        .progress-fill { height: 100%; background: #3b82f6; width: 0%; border-radius: 4px; transition: width 0.2s ease; }
-        .progress-text { font-size: 13px; color: #737373; text-align: center; }
+        .progress-bar { width: 100%; height: 8px; background: var(--uf-progress-track); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+        .progress-fill { height: 100%; background: var(--uf-accent); width: 0%; border-radius: 4px; transition: width 0.2s ease; }
+        .progress-text { font-size: 13px; color: var(--uf-text-muted); text-align: center; }
 
         .alert { padding: 14px 16px; border-radius: 8px; margin-top: 18px; font-size: 13px; display: none; align-items: flex-start; gap: 10px; }
         .alert.show { display: flex; }
-        .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .alert-success { background: var(--uf-success-bg); color: var(--uf-success-text); border: 1px solid var(--uf-success-border); }
+        .alert-error { background: var(--uf-error-bg); color: var(--uf-error-text); border: 1px solid var(--uf-error-border); }
         .alert svg { flex-shrink: 0; margin-top: 1px; }
 
         table.data-table { border-collapse: collapse; width: 100%; font-size: 13px; }
         table.data-table th, table.data-table td {
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             padding: 6px 8px;
             text-align: left;
             max-width: 240px;
@@ -302,24 +336,24 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        table.data-table th { background: #fafafa; font-weight: 600; }
+        table.data-table th { background: var(--uf-bg); font-weight: 600; }
 
-        .table-scroll { overflow-x: auto; border: 1px solid #e5e5e5; border-radius: 8px; margin-top: 16px; }
+        .table-scroll { overflow-x: auto; border: 1px solid var(--uf-border); border-radius: 8px; margin-top: 16px; }
 
-        .diff-page { border: 1px solid #e5e5e5; border-radius: 8px; margin-top: 16px; overflow: hidden; }
-        .diff-page-head { background: #fafafa; padding: 10px 14px; font-size: 13px; font-weight: 600; border-bottom: 1px solid #e5e5e5; }
+        .diff-page { border: 1px solid var(--uf-border); border-radius: 8px; margin-top: 16px; overflow: hidden; }
+        .diff-page-head { background: var(--uf-bg); padding: 10px 14px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--uf-border); }
         .diff-page-body { padding: 14px; font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-        .diff-add { background: #dcfce7; color: #15803d; text-decoration: none; }
-        .diff-del { background: #fee2e2; color: #b91c1c; text-decoration: line-through; }
+        .diff-add { background: var(--uf-success-bg); color: var(--uf-success-text); text-decoration: none; }
+        .diff-del { background: var(--uf-error-bg); color: var(--uf-error-text); text-decoration: line-through; }
 
         .canvas-pair { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
         .canvas-pair figure { margin: 0; }
-        .canvas-pair figcaption { font-size: 12px; color: #737373; margin-bottom: 6px; }
-        .canvas-pair canvas { max-width: 100%; border: 1px solid #e5e5e5; border-radius: 6px; }
+        .canvas-pair figcaption { font-size: 12px; color: var(--uf-text-muted); margin-bottom: 6px; }
+        .canvas-pair canvas { max-width: 100%; border: 1px solid var(--uf-border); border-radius: 6px; }
 
-        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #f5f5f5; color: #525252; }
-        .pill.warn { background: #fef3c7; color: #92400e; }
-        .pill.ok { background: #dcfce7; color: #15803d; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--uf-progress-track); color: var(--uf-text-muted); }
+        .pill.warn { background: var(--uf-warning-bg); color: var(--uf-warning-text); }
+        .pill.ok { background: var(--uf-success-bg); color: var(--uf-success-text); }
 
         .step-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
         .step-row {
@@ -327,86 +361,102 @@
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
         .step-row .step-index {
-            width: 22px; height: 22px; border-radius: 999px; background: #3b82f6; color: white;
+            width: 22px; height: 22px; border-radius: 999px; background: var(--uf-accent); color: white;
             font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .step-row .step-label { flex: 1; font-size: 13px; font-weight: 500; }
-        .step-row .step-detail { font-size: 12px; color: #737373; }
+        .step-row .step-detail { font-size: 12px; color: var(--uf-text-muted); }
 
-        details.field-config { margin-top: 8px; border: 1px solid #e5e5e5; border-radius: 8px; padding: 10px 12px; background: #fafafa; }
+        details.field-config { margin-top: 8px; border: 1px solid var(--uf-border); border-radius: 8px; padding: 10px 12px; background: var(--uf-bg); }
         details.field-config summary { cursor: pointer; font-size: 13px; font-weight: 500; }
 
-        .footer-note { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 12px; color: #a3a3a3; text-align: center; }
+        .footer-note { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--uf-border); font-size: 12px; color: #a3a3a3; text-align: center; }
 
+        /* Sidenav-to-top-nav collapse gets its own, slightly wider breakpoint — 680px is too
+           narrow for a comfortable horizontal scroller with nine tab labels. Every other
+           responsive adjustment below uses the standard 680px breakpoint shared across the suite. */
         @media (max-width: 780px) {
             .shell { grid-template-columns: 1fr; }
             .sidenav { position: static; flex-direction: row; overflow-x: auto; }
             .nav-btn { white-space: nowrap; }
+        }
+
+        @media (max-width: 680px) {
+            .app { padding: 12px; }
+            .header { padding: 20px; }
+            h1 { font-size: 20px; }
+            .subtitle { font-size: 14px; }
+            .panel-header { padding: 18px 20px; }
+            .panel-body { padding: 18px 20px; }
+            .field-grid { grid-template-columns: 1fr; }
+            .actions { flex-direction: column; align-items: stretch; }
+            .actions .btn { justify-content: center; }
+            .canvas-pair { flex-direction: column; }
         }
     </style>
 </head>
 <body>
     <div class="app">
         <div class="header">
-            <h1><i data-lucide="file-stack" style="color:#3b82f6;"></i> PDF Power Suite</h1>
+            <h1><i data-lucide="file-stack" size="20" style="color:var(--uf-accent);"></i> PDF Power Suite</h1>
             <p class="subtitle">Merge, split, compress, watermark, OCR, diff, extract and mail-merge PDFs — entirely in your browser, nothing uploaded to a server.</p>
         </div>
 
         <div class="shell">
             <nav class="sidenav" id="sidenav">
-                <button class="nav-btn active" data-tab="merge"><i data-lucide="combine"></i> Merge</button>
-                <button class="nav-btn" data-tab="split"><i data-lucide="scissors"></i> Split</button>
-                <button class="nav-btn" data-tab="compress"><i data-lucide="minimize-2"></i> Compress</button>
-                <button class="nav-btn" data-tab="watermark"><i data-lucide="stamp"></i> Watermark &amp; Bates</button>
-                <button class="nav-btn" data-tab="ocr"><i data-lucide="scan-text"></i> OCR</button>
-                <button class="nav-btn" data-tab="diff"><i data-lucide="git-compare"></i> Diff</button>
-                <button class="nav-btn" data-tab="table"><i data-lucide="table"></i> Table Extraction</button>
-                <button class="nav-btn" data-tab="mailmerge"><i data-lucide="mail-plus"></i> Mail Merge</button>
-                <button class="nav-btn" data-tab="pipeline"><i data-lucide="workflow"></i> Pipeline</button>
+                <button class="nav-btn active" data-tab="merge"><i data-lucide="combine" size="20"></i> Merge</button>
+                <button class="nav-btn" data-tab="split"><i data-lucide="scissors" size="20"></i> Split</button>
+                <button class="nav-btn" data-tab="compress"><i data-lucide="minimize-2" size="20"></i> Compress</button>
+                <button class="nav-btn" data-tab="watermark"><i data-lucide="stamp" size="20"></i> Watermark &amp; Bates</button>
+                <button class="nav-btn" data-tab="ocr"><i data-lucide="scan-text" size="20"></i> OCR</button>
+                <button class="nav-btn" data-tab="diff"><i data-lucide="git-compare" size="20"></i> Diff</button>
+                <button class="nav-btn" data-tab="table"><i data-lucide="table" size="20"></i> Table Extraction</button>
+                <button class="nav-btn" data-tab="mailmerge"><i data-lucide="mail-plus" size="20"></i> Mail Merge</button>
+                <button class="nav-btn" data-tab="pipeline"><i data-lucide="workflow" size="20"></i> Pipeline</button>
             </nav>
 
             <div class="panels">
                 <!-- ============ MERGE ============ -->
                 <section class="panel active" id="panel-merge">
                     <div class="panel-header">
-                        <h2><i data-lucide="combine" style="color:#3b82f6;"></i> Merge PDFs</h2>
+                        <h2><i data-lucide="combine" size="20" style="color:var(--uf-accent);"></i> Merge PDFs</h2>
                         <p class="panel-desc">Combine multiple PDFs into one, in the order you choose.</p>
                     </div>
                     <div class="panel-body">
                         <div class="upload-area" id="merge-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop PDFs here or click to select</div>
                             <div class="upload-hint">You can select multiple files at once</div>
                             <input type="file" id="merge-file-input" accept="application/pdf,.pdf" multiple>
                         </div>
                         <div class="file-list" id="merge-file-list"></div>
                         <div class="actions">
-                            <button class="btn" id="merge-run-btn" disabled><i data-lucide="play" size="16"></i> Merge &amp; Download</button>
-                            <button class="btn btn-secondary" id="merge-clear-btn"><i data-lucide="trash-2" size="16"></i> Clear</button>
+                            <button class="btn" id="merge-run-btn" disabled><i data-lucide="play" size="18"></i> Merge &amp; Download</button>
+                            <button class="btn btn-secondary" id="merge-clear-btn"><i data-lucide="trash-2" size="18"></i> Clear</button>
                         </div>
                         <div class="progress-container" id="merge-progress">
                             <div class="progress-bar"><div class="progress-fill" id="merge-progress-fill"></div></div>
                             <div class="progress-text" id="merge-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="merge-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="merge-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="merge-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="merge-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                     </div>
                 </section>
 
                 <!-- ============ SPLIT ============ -->
                 <section class="panel" id="panel-split">
                     <div class="panel-header">
-                        <h2><i data-lucide="scissors" style="color:#3b82f6;"></i> Split a PDF</h2>
+                        <h2><i data-lucide="scissors" size="20" style="color:var(--uf-accent);"></i> Split a PDF</h2>
                         <p class="panel-desc">Break one PDF into several, either one file per page or by custom page ranges.</p>
                     </div>
                     <div class="panel-body">
                         <div class="upload-area" id="split-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop a PDF here or click to select</div>
                             <div class="upload-hint">One file at a time</div>
                             <input type="file" id="split-file-input" accept="application/pdf,.pdf">
@@ -429,21 +479,21 @@
                             <div class="field-hint">Comma-separated. Each range or single page becomes one output file, e.g. "1-3,4,7-9" makes 3 files.</div>
                         </div>
                         <div class="actions">
-                            <button class="btn" id="split-run-btn" disabled><i data-lucide="play" size="16"></i> Split &amp; Download ZIP</button>
+                            <button class="btn" id="split-run-btn" disabled><i data-lucide="play" size="18"></i> Split &amp; Download ZIP</button>
                         </div>
                         <div class="progress-container" id="split-progress">
                             <div class="progress-bar"><div class="progress-fill" id="split-progress-fill"></div></div>
                             <div class="progress-text" id="split-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="split-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="split-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="split-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="split-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                     </div>
                 </section>
 
                 <!-- ============ COMPRESS ============ -->
                 <section class="panel" id="panel-compress">
                     <div class="panel-header">
-                        <h2><i data-lucide="minimize-2" style="color:#3b82f6;"></i> Compress a PDF</h2>
+                        <h2><i data-lucide="minimize-2" size="20" style="color:var(--uf-accent);"></i> Compress a PDF</h2>
                         <p class="panel-desc">Rasterize each page and re-encode it as JPEG to shrink file size.</p>
                     </div>
                     <div class="panel-body">
@@ -452,7 +502,7 @@
                             <span>This trades text-selectability for a smaller file: every page becomes a flat image, so text can no longer be selected, searched or copied in the output. Use this for scans or when only the visual appearance matters, not for text-heavy documents you still need to search.</span>
                         </div>
                         <div class="upload-area" id="compress-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop a PDF here or click to select</div>
                             <div class="upload-hint">One file at a time</div>
                             <input type="file" id="compress-file-input" accept="application/pdf,.pdf">
@@ -469,26 +519,26 @@
                             </div>
                         </div>
                         <div class="actions">
-                            <button class="btn" id="compress-run-btn" disabled><i data-lucide="play" size="16"></i> Compress &amp; Download</button>
+                            <button class="btn" id="compress-run-btn" disabled><i data-lucide="play" size="18"></i> Compress &amp; Download</button>
                         </div>
                         <div class="progress-container" id="compress-progress">
                             <div class="progress-bar"><div class="progress-fill" id="compress-progress-fill"></div></div>
                             <div class="progress-text" id="compress-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="compress-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="compress-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="compress-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="compress-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                     </div>
                 </section>
 
                 <!-- ============ WATERMARK & BATES ============ -->
                 <section class="panel" id="panel-watermark">
                     <div class="panel-header">
-                        <h2><i data-lucide="stamp" style="color:#3b82f6;"></i> Watermark &amp; Bates Numbering</h2>
+                        <h2><i data-lucide="stamp" size="20" style="color:var(--uf-accent);"></i> Watermark &amp; Bates Numbering</h2>
                         <p class="panel-desc">Stamp a text watermark and/or sequential Bates numbers onto every page.</p>
                     </div>
                     <div class="panel-body">
                         <div class="upload-area" id="watermark-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop a PDF here or click to select</div>
                             <div class="upload-hint">One file at a time</div>
                             <input type="file" id="watermark-file-input" accept="application/pdf,.pdf">
@@ -567,21 +617,21 @@
                         </details>
 
                         <div class="actions">
-                            <button class="btn" id="watermark-run-btn" disabled><i data-lucide="play" size="16"></i> Apply &amp; Download</button>
+                            <button class="btn" id="watermark-run-btn" disabled><i data-lucide="play" size="18"></i> Apply &amp; Download</button>
                         </div>
                         <div class="progress-container" id="watermark-progress">
                             <div class="progress-bar"><div class="progress-fill" id="watermark-progress-fill"></div></div>
                             <div class="progress-text" id="watermark-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="watermark-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="watermark-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="watermark-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="watermark-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                     </div>
                 </section>
 
                 <!-- ============ OCR ============ -->
                 <section class="panel" id="panel-ocr">
                     <div class="panel-header">
-                        <h2><i data-lucide="scan-text" style="color:#3b82f6;"></i> OCR → Searchable PDF</h2>
+                        <h2><i data-lucide="scan-text" size="20" style="color:var(--uf-accent);"></i> OCR → Searchable PDF</h2>
                         <p class="panel-desc">Recognize text in a scanned/image PDF and embed it as an invisible, selectable text layer.</p>
                     </div>
                     <div class="panel-body">
@@ -594,7 +644,7 @@
                             <span>Output: the recognized words are drawn back onto each page as real, selectable/searchable PDF text with <code>opacity: 0</code> — visually the page looks exactly like the original scan, but you can now select, copy and search its text. Word position and size are matched to Tesseract's bounding boxes; very small or rotated text may end up only approximately aligned, since the goal is searchability, not pixel-perfect invisible glyph placement.</span>
                         </div>
                         <div class="upload-area" id="ocr-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop a scanned PDF here or click to select</div>
                             <div class="upload-hint">One file at a time</div>
                             <input type="file" id="ocr-file-input" accept="application/pdf,.pdf">
@@ -619,28 +669,28 @@
                             </div>
                         </div>
                         <div class="actions">
-                            <button class="btn" id="ocr-run-btn" disabled><i data-lucide="play" size="16"></i> Run OCR &amp; Download Searchable PDF</button>
+                            <button class="btn" id="ocr-run-btn" disabled><i data-lucide="play" size="18"></i> Run OCR &amp; Download Searchable PDF</button>
                         </div>
                         <div class="progress-container" id="ocr-progress">
                             <div class="progress-bar"><div class="progress-fill" id="ocr-progress-fill"></div></div>
                             <div class="progress-text" id="ocr-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="ocr-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="ocr-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="ocr-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="ocr-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                     </div>
                 </section>
 
                 <!-- ============ DIFF ============ -->
                 <section class="panel" id="panel-diff">
                     <div class="panel-header">
-                        <h2><i data-lucide="git-compare" style="color:#3b82f6;"></i> Diff Two PDF Versions</h2>
+                        <h2><i data-lucide="git-compare" size="20" style="color:var(--uf-accent);"></i> Diff Two PDF Versions</h2>
                         <p class="panel-desc">Compare a "before" and "after" PDF, word-by-word or pixel-by-pixel.</p>
                     </div>
                     <div class="panel-body">
                         <div class="field-grid">
                             <div>
                                 <div class="upload-area" id="diff-upload-a">
-                                    <div class="upload-icon"><i data-lucide="file" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-icon"><i data-lucide="file" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                                     <div class="upload-text">PDF A (before)</div>
                                     <div class="upload-hint">Click to select</div>
                                     <input type="file" id="diff-file-input-a" accept="application/pdf,.pdf">
@@ -649,7 +699,7 @@
                             </div>
                             <div>
                                 <div class="upload-area" id="diff-upload-b">
-                                    <div class="upload-icon"><i data-lucide="file" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-icon"><i data-lucide="file" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                                     <div class="upload-text">PDF B (after)</div>
                                     <div class="upload-hint">Click to select</div>
                                     <input type="file" id="diff-file-input-b" accept="application/pdf,.pdf">
@@ -669,14 +719,14 @@
                             </div>
                         </div>
                         <div class="actions">
-                            <button class="btn" id="diff-run-btn" disabled><i data-lucide="play" size="16"></i> Compare</button>
+                            <button class="btn" id="diff-run-btn" disabled><i data-lucide="play" size="18"></i> Compare</button>
                         </div>
                         <div class="progress-container" id="diff-progress">
                             <div class="progress-bar"><div class="progress-fill" id="diff-progress-fill"></div></div>
                             <div class="progress-text" id="diff-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="diff-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="diff-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="diff-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="diff-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                         <div id="diff-results"></div>
                     </div>
                 </section>
@@ -684,7 +734,7 @@
                 <!-- ============ TABLE EXTRACTION ============ -->
                 <section class="panel" id="panel-table">
                     <div class="panel-header">
-                        <h2><i data-lucide="table" style="color:#3b82f6;"></i> Table Extraction</h2>
+                        <h2><i data-lucide="table" size="20" style="color:var(--uf-accent);"></i> Table Extraction</h2>
                         <p class="panel-desc">Heuristically detect a simple grid-like table and export it as CSV.</p>
                     </div>
                     <div class="panel-body">
@@ -693,7 +743,7 @@
                             <span>This is a best-effort heuristic (clustering text by row/column position), not a full table-recognition model. It works well on simple grid-like tables with clear alignment and struggles with merged cells, multi-line cells or unusual layouts. Tune the sliders below and re-run if the first pass looks wrong.</span>
                         </div>
                         <div class="upload-area" id="table-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop a PDF here or click to select</div>
                             <div class="upload-hint">One file at a time</div>
                             <input type="file" id="table-file-input" accept="application/pdf,.pdf">
@@ -714,11 +764,11 @@
                             </div>
                         </div>
                         <div class="actions">
-                            <button class="btn" id="table-run-btn" disabled><i data-lucide="play" size="16"></i> Extract &amp; Preview</button>
-                            <button class="btn btn-secondary" id="table-download-btn" style="display:none;"><i data-lucide="download" size="16"></i> Download CSV</button>
+                            <button class="btn" id="table-run-btn" disabled><i data-lucide="play" size="18"></i> Extract &amp; Preview</button>
+                            <button class="btn btn-secondary" id="table-download-btn" style="display:none;"><i data-lucide="download" size="18"></i> Download CSV</button>
                         </div>
-                        <div class="alert alert-success" id="table-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="table-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="table-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="table-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                         <div id="table-results"></div>
                     </div>
                 </section>
@@ -726,14 +776,14 @@
                 <!-- ============ MAIL MERGE ============ -->
                 <section class="panel" id="panel-mailmerge">
                     <div class="panel-header">
-                        <h2><i data-lucide="mail-plus" style="color:#3b82f6;"></i> Mail Merge (CSV → Filled PDF Forms)</h2>
+                        <h2><i data-lucide="mail-plus" size="20" style="color:var(--uf-accent);"></i> Mail Merge (CSV → Filled PDF Forms)</h2>
                         <p class="panel-desc">Fill one copy of a PDF form per row of a CSV/XLSX file, then download them all as a ZIP.</p>
                     </div>
                     <div class="panel-body">
                         <div class="field-grid">
                             <div>
                                 <div class="upload-area" id="mm-upload-pdf">
-                                    <div class="upload-icon"><i data-lucide="file-text" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-icon"><i data-lucide="file-text" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                                     <div class="upload-text">PDF form (AcroForm)</div>
                                     <div class="upload-hint">Click to select</div>
                                     <input type="file" id="mm-file-input-pdf" accept="application/pdf,.pdf">
@@ -742,7 +792,7 @@
                             </div>
                             <div>
                                 <div class="upload-area" id="mm-upload-data">
-                                    <div class="upload-icon"><i data-lucide="table-2" size="22" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                                    <div class="upload-icon"><i data-lucide="table-2" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                                     <div class="upload-text">CSV or XLSX data</div>
                                     <div class="upload-hint">One row = one output PDF</div>
                                     <input type="file" id="mm-file-input-data" accept=".csv,.xlsx,.xls">
@@ -760,14 +810,14 @@
                             <input type="text" id="mm-filename-col" placeholder="e.g. LastName — leave blank to auto-number">
                         </div>
                         <div class="actions">
-                            <button class="btn" id="mm-run-btn" disabled><i data-lucide="play" size="16"></i> Generate &amp; Download ZIP</button>
+                            <button class="btn" id="mm-run-btn" disabled><i data-lucide="play" size="18"></i> Generate &amp; Download ZIP</button>
                         </div>
                         <div class="progress-container" id="mm-progress">
                             <div class="progress-bar"><div class="progress-fill" id="mm-progress-fill"></div></div>
                             <div class="progress-text" id="mm-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="mm-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="mm-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="mm-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="mm-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                         <div id="mm-skip-report"></div>
                     </div>
                 </section>
@@ -775,12 +825,12 @@
                 <!-- ============ PIPELINE ============ -->
                 <section class="panel" id="panel-pipeline">
                     <div class="panel-header">
-                        <h2><i data-lucide="workflow" style="color:#3b82f6;"></i> Pipeline Builder</h2>
+                        <h2><i data-lucide="workflow" size="20" style="color:var(--uf-accent);"></i> Pipeline Builder</h2>
                         <p class="panel-desc">Chain operations together: each step's output PDF feeds the next step.</p>
                     </div>
                     <div class="panel-body">
                         <div class="upload-area" id="pipeline-upload">
-                            <div class="upload-icon"><i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i></div>
+                            <div class="upload-icon"><i data-lucide="upload" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i></div>
                             <div class="upload-text">Drop the starting PDF here or click to select</div>
                             <div class="upload-hint">This is the input to step 1</div>
                             <input type="file" id="pipeline-file-input" accept="application/pdf,.pdf">
@@ -806,24 +856,24 @@
                                 </select>
                             </div>
                             <div class="field-row" style="margin-top:0; display:flex; align-items:flex-end;">
-                                <button class="btn btn-secondary" id="pipeline-add-btn" style="width:100%;"><i data-lucide="plus" size="16"></i> Add step</button>
+                                <button class="btn btn-secondary" id="pipeline-add-btn" style="width:100%;"><i data-lucide="plus" size="18"></i> Add step</button>
                             </div>
                         </div>
 
                         <div class="step-list" id="pipeline-step-list"></div>
 
                         <div class="actions">
-                            <button class="btn" id="pipeline-run-btn" disabled><i data-lucide="play" size="16"></i> Run Pipeline &amp; Download</button>
-                            <button class="btn btn-secondary" id="pipeline-export-btn"><i data-lucide="download" size="16"></i> Export JSON</button>
-                            <button class="btn btn-secondary" id="pipeline-import-btn"><i data-lucide="upload" size="16"></i> Import JSON</button>
+                            <button class="btn" id="pipeline-run-btn" disabled><i data-lucide="play" size="18"></i> Run Pipeline &amp; Download</button>
+                            <button class="btn btn-secondary" id="pipeline-export-btn"><i data-lucide="download" size="18"></i> Export JSON</button>
+                            <button class="btn btn-secondary" id="pipeline-import-btn"><i data-lucide="upload" size="18"></i> Import JSON</button>
                             <input type="file" id="pipeline-import-input" accept="application/json,.json" style="display:none;">
                         </div>
                         <div class="progress-container" id="pipeline-progress">
                             <div class="progress-bar"><div class="progress-fill" id="pipeline-progress-fill"></div></div>
                             <div class="progress-text" id="pipeline-progress-text"></div>
                         </div>
-                        <div class="alert alert-success" id="pipeline-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
-                        <div class="alert alert-error" id="pipeline-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-success" role="status" aria-live="polite" id="pipeline-alert-success"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                        <div class="alert alert-error" role="status" aria-live="polite" id="pipeline-alert-error"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                     </div>
                 </section>
 

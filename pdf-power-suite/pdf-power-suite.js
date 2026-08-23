@@ -108,10 +108,11 @@ const PPS = {
         box.querySelector('span').textContent = message;
         box.classList.add('show');
         if (other) other.classList.remove('show');
-        if (type === 'success') {
-            clearTimeout(box._hideTimer);
-            box._hideTimer = setTimeout(() => box.classList.remove('show'), 8000);
-        }
+        // Shared suite timing convention: success/info messages are transient (6s), error/warning
+        // messages stay a little longer (8s) since they usually need to be read and acted on.
+        clearTimeout(box._hideTimer);
+        const hideAfterMs = (type === 'success' || type === 'info') ? 6000 : 8000;
+        box._hideTimer = setTimeout(() => box.classList.remove('show'), hideAfterMs);
     },
 
     hideAlerts(prefix) {
@@ -147,7 +148,9 @@ const PPS = {
 
         const icon = document.createElement('i');
         icon.setAttribute('data-lucide', 'file-text');
-        icon.style.color = '#737373';
+        icon.setAttribute('width', '16');
+        icon.setAttribute('height', '16');
+        icon.style.color = 'var(--uf-text-muted)';
         row.appendChild(icon);
 
         const nameEl = document.createElement('div');
@@ -163,23 +166,28 @@ const PPS = {
 
         const controls = document.createElement('div');
         controls.className = 'file-controls';
-        if (handlers.onUp) controls.appendChild(PPS.iconButton('chevron-up', handlers.onUp, handlers.upDisabled));
-        if (handlers.onDown) controls.appendChild(PPS.iconButton('chevron-down', handlers.onDown, handlers.downDisabled));
-        if (handlers.onRemove) controls.appendChild(PPS.iconButton('x', handlers.onRemove));
+        if (handlers.onUp) controls.appendChild(PPS.iconButton('chevron-up', handlers.onUp, handlers.upDisabled, 'Move up'));
+        if (handlers.onDown) controls.appendChild(PPS.iconButton('chevron-down', handlers.onDown, handlers.downDisabled, 'Move down'));
+        if (handlers.onRemove) controls.appendChild(PPS.iconButton('x', handlers.onRemove, false, `Remove ${name}`));
         row.appendChild(controls);
 
         return row;
     },
 
-    iconButton(iconName, handler, disabled = false) {
+    // Icon-only button used throughout the app (reorder/remove controls in file lists and
+    // pipeline steps). Always carries an aria-label since it has no visible text.
+    iconButton(iconName, handler, disabled = false, label = '') {
+        const DEFAULT_LABELS = { 'chevron-up': 'Move up', 'chevron-down': 'Move down', x: 'Remove' };
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn-icon';
         btn.disabled = !!disabled;
+        btn.setAttribute('aria-label', label || DEFAULT_LABELS[iconName] || iconName);
         const icon = document.createElement('i');
         icon.setAttribute('data-lucide', iconName);
-        icon.setAttribute('width', '14');
-        icon.setAttribute('height', '14');
+        icon.setAttribute('width', '16');
+        icon.setAttribute('height', '16');
+        icon.setAttribute('aria-hidden', 'true');
         btn.appendChild(icon);
         btn.addEventListener('click', handler);
         return btn;
