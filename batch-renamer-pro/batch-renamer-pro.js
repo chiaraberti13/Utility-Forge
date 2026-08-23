@@ -314,7 +314,8 @@ const state = {
     autoResolveCollisions: true,
     previewEntries: [],   // computed preview rows
     rollbackLog: [],      // { oldName, newName, timestamp }
-    lastRunReport: []      // { oldName, newName, result, reason }
+    lastRunReport: [],     // { oldName, newName, result, reason }
+    duplicateGroups: []    // array of arrays of file entries sharing a content hash
 };
 
 // ---------------------------------------------------------------------------
@@ -376,22 +377,144 @@ function initDom() {
         reuploadLogBtn: qs('reuploadLogBtn'),
 
         alertBox: qs('alertBox'),
-        alertText: qs('alertText')
+        alertText: qs('alertText'),
+
+        recipeSelect: qs('recipeSelect'),
+        loadRecipeBtn: qs('loadRecipeBtn'),
+        deleteRecipeBtn: qs('deleteRecipeBtn'),
+        recipeNameInput: qs('recipeNameInput'),
+        saveRecipeBtn: qs('saveRecipeBtn'),
+
+        duplicatesSectionWrap: qs('duplicatesSectionWrap'),
+        findDuplicatesBtn: qs('findDuplicatesBtn'),
+        duplicatesResult: qs('duplicatesResult'),
+        duplicatesSummary: qs('duplicatesSummary'),
+        duplicatesGroups: qs('duplicatesGroups'),
+        deleteDuplicatesBtn: qs('deleteDuplicatesBtn')
     };
 }
+
+const ALERT_ICONS = { success: 'check-circle', error: 'alert-circle', warning: 'alert-triangle', info: 'info' };
 
 function showAlert(type, message, autoHide = true) {
     if (!dom.alertBox) return;
     dom.alertBox.className = 'alert alert-' + type;
     dom.alertBox.style.display = 'flex';
     dom.alertText.textContent = message;
+    const icon = dom.alertBox.querySelector('i');
+    if (icon) icon.setAttribute('data-lucide', ALERT_ICONS[type] || 'info');
     refreshIcons();
+    clearTimeout(showAlert._t);
     if (autoHide) {
-        clearTimeout(showAlert._t);
+        const delay = (type === 'error' || type === 'warning') ? 8000 : 6000;
         showAlert._t = setTimeout(() => {
             dom.alertBox.style.display = 'none';
-        }, 6000);
+        }, delay);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Named recipes (reusable saved configurations, stored in localStorage)
+// ---------------------------------------------------------------------------
+const RECIPES_KEY = 'uf-batch-renamer-recipes';
+
+function getRecipes() {
+    try {
+        const raw = localStorage.getItem(RECIPES_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveRecipes(list) {
+    try { localStorage.setItem(RECIPES_KEY, JSON.stringify(list)); } catch (e) { /* storage unavailable/full: recipe just won't persist */ }
+}
+
+function currentSettingsAsRecipe(name) {
+    return {
+        name,
+        template: dom.templateInput.value,
+        seqStart: dom.seqStart.value,
+        dateFormat: dom.dateFormat.value,
+        sortKey: dom.sortKey.value,
+        sortDir: dom.sortDir.value,
+        autoResolveCollisions: dom.collisionToggle.checked,
+        flatten: dom.flattenToggle.checked,
+        recursive: dom.recursiveToggle.checked,
+        csvMode: (() => { for (const r of dom.csvModeRadios()) if (r.checked) return r.value; return 'twoColumn'; })()
+    };
+}
+
+function applyRecipe(recipe) {
+    if (!recipe) return;
+    dom.templateInput.value = recipe.template || '';
+    dom.seqStart.value = recipe.seqStart || '1';
+    dom.dateFormat.value = recipe.dateFormat || 'YYYYMMDD';
+    dom.sortKey.value = recipe.sortKey || 'name';
+    dom.sortDir.value = recipe.sortDir || 'asc';
+    state.sortKey = dom.sortKey.value;
+    state.sortDir = dom.sortDir.value;
+    dom.collisionToggle.checked = recipe.autoResolveCollisions !== false;
+    state.autoResolveCollisions = dom.collisionToggle.checked;
+    dom.flattenToggle.checked = recipe.flatten !== false;
+    dom.recursiveToggle.checked = !!recipe.recursive;
+    state.recursive = dom.recursiveToggle.checked;
+    dom.flattenRow.style.display = state.recursive ? 'flex' : 'none';
+    for (const r of dom.csvModeRadios()) r.checked = (r.value === (recipe.csvMode || 'twoColumn'));
+    if (state.files.length) renderFileList();
+    showAlert('success', `Ricetta "${recipe.name}" caricata.`);
+}
+
+function refreshRecipeSelect() {
+    const recipes = getRecipes();
+    clearChildren(dom.recipeSelect);
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = recipes.length ? '— seleziona una ricetta —' : '— nessuna ricetta salvata —';
+    dom.recipeSelect.appendChild(empty);
+    for (const r of recipes) {
+        const opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = r.name;
+        dom.recipeSelect.appendChild(opt);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Dark mode toggle
+// ---------------------------------------------------------------------------
+const THEME_KEY = 'uf-theme';
+
+function applyThemeIcon() {
+    const btn = qs('themeToggle');
+    if (!btn) return;
+    const saved = localStorage.getItem(THEME_KEY);
+    const isDark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    btn.innerHTML = '';
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+    icon.setAttribute('size', '18');
+    btn.appendChild(icon);
+    refreshIcons();
+}
+
+function initThemeToggle() {
+    let saved = null;
+    try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* localStorage unavailable */ }
+    if (saved === 'dark' || saved === 'light') document.documentElement.setAttribute('data-theme', saved);
+    applyThemeIcon();
+    const btn = qs('themeToggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme')
+            || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
+        applyThemeIcon();
+    });
 }
 
 function refreshIcons() {
@@ -502,8 +625,113 @@ async function listFolder() {
     dom.fileCount.textContent = `${files.length} file trovati${state.recursive ? ' (incluse sottocartelle)' : ''}`;
     dom.fileListSection.style.display = files.length ? 'block' : 'none';
     dom.flattenRow.style.display = state.recursive ? 'flex' : 'none';
+    dom.duplicatesSectionWrap.style.display = files.length ? 'block' : 'none';
+    dom.duplicatesResult.style.display = 'none';
     renderFileList();
     showAlert('success', `Cartella caricata: ${files.length} file.`);
+}
+
+// ---------------------------------------------------------------------------
+// Duplicate detection (opt-in, content-hash based, kept separate from renaming)
+// ---------------------------------------------------------------------------
+async function sha256Hex(buffer) {
+    const digest = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function findDuplicates() {
+    if (!state.files.length) return;
+    dom.findDuplicatesBtn.disabled = true;
+    const hashes = new Map(); // hash -> array of file entries
+    let done = 0;
+    for (const f of state.files) {
+        try {
+            const file = await f.handle.getFile();
+            const buf = await file.arrayBuffer();
+            const hash = await sha256Hex(buf);
+            if (!hashes.has(hash)) hashes.set(hash, []);
+            hashes.get(hash).push(f);
+        } catch (err) {
+            // Unreadable file: skip it from duplicate detection rather than aborting the whole scan.
+        }
+        done++;
+        if (done % 25 === 0) await new Promise((r) => setTimeout(r, 0)); // keep the tab responsive
+    }
+
+    const groups = [...hashes.values()].filter((g) => g.length > 1);
+    renderDuplicateGroups(groups);
+    dom.findDuplicatesBtn.disabled = false;
+    dom.duplicatesResult.style.display = 'block';
+    dom.duplicatesSummary.textContent = groups.length
+        ? `${groups.length} gruppi di duplicati trovati (${groups.reduce((s, g) => s + g.length, 0)} file coinvolti).`
+        : 'Nessun duplicato esatto trovato.';
+    refreshIcons();
+}
+
+function renderDuplicateGroups(groups) {
+    clearChildren(dom.duplicatesGroups);
+    dom.deleteDuplicatesBtn.disabled = true;
+    groups.forEach((group, gi) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'card';
+        wrap.style.marginTop = '10px';
+        wrap.style.background = 'var(--uf-card-bg)';
+
+        const title = document.createElement('div');
+        title.style.fontSize = '13px';
+        title.style.color = 'var(--uf-text-muted)';
+        title.style.marginBottom = '8px';
+        title.textContent = `Gruppo ${gi + 1} — ${group.length} copie identiche (${formatBytes(group[0].size)} ciascuna)`;
+        wrap.appendChild(title);
+
+        group.forEach((f, fi) => {
+            const row = document.createElement('div');
+            row.className = 'toggle-row';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.id = `dupcb-${gi}-${fi}`;
+            cb.dataset.group = String(gi);
+            cb.dataset.index = String(fi);
+            cb.addEventListener('change', updateDeleteDuplicatesState);
+            const label = document.createElement('label');
+            label.setAttribute('for', cb.id);
+            label.textContent = f.path + (fi === 0 ? '  (originale suggerito — lasciata deselezionata di default)' : '');
+            row.appendChild(cb);
+            row.appendChild(label);
+            wrap.appendChild(row);
+        });
+
+        dom.duplicatesGroups.appendChild(wrap);
+    });
+    state.duplicateGroups = groups;
+}
+
+function updateDeleteDuplicatesState() {
+    const anyChecked = dom.duplicatesGroups.querySelector('input[type="checkbox"]:checked');
+    dom.deleteDuplicatesBtn.disabled = !anyChecked;
+}
+
+async function deleteSelectedDuplicates() {
+    const checked = [...dom.duplicatesGroups.querySelectorAll('input[type="checkbox"]:checked')];
+    if (!checked.length) return;
+    if (!window.confirm(`Eliminare definitivamente ${checked.length} file duplicati dalla cartella? L'operazione non è reversibile tramite il rollback della rinomina.`)) return;
+
+    dom.deleteDuplicatesBtn.disabled = true;
+    let ok = 0, fail = 0;
+    for (const cb of checked) {
+        const gi = Number(cb.dataset.group);
+        const fi = Number(cb.dataset.index);
+        const entry = state.duplicateGroups[gi] && state.duplicateGroups[gi][fi];
+        if (!entry) continue;
+        try {
+            await entry.dirHandle.removeEntry(entry.name);
+            ok++;
+        } catch (err) {
+            fail++;
+        }
+    }
+    showAlert(fail ? 'error' : 'success', `Duplicati eliminati: ${ok}, errori: ${fail}.`);
+    await listFolder(); // refresh the listing/hash groups against the now-changed folder contents
 }
 
 function sortedFiles() {
@@ -526,14 +754,39 @@ function formatBytes(n) {
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// Cap thumbnail generation so a folder with thousands of images can't freeze the tab.
+const MAX_THUMBNAILS = 200;
+let thumbUrls = [];
+
+function revokeThumbUrls() {
+    thumbUrls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ } });
+    thumbUrls = [];
+}
+
 function renderFileList() {
+    revokeThumbUrls();
     clearChildren(dom.fileListBody);
     const files = sortedFiles();
+    let thumbCount = 0;
     for (const f of files) {
         const tr = document.createElement('tr');
 
         const tdName = document.createElement('td');
-        tdName.textContent = f.path;
+        if (f.isImage && thumbCount < MAX_THUMBNAILS) {
+            thumbCount++;
+            const img = document.createElement('img');
+            img.className = 'thumb';
+            img.alt = '';
+            tdName.appendChild(img);
+            f.handle.getFile().then((file) => {
+                const url = URL.createObjectURL(file);
+                thumbUrls.push(url);
+                img.src = url;
+            }).catch(() => { img.remove(); });
+        }
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = f.path;
+        tdName.appendChild(nameSpan);
         tr.appendChild(tdName);
 
         const tdSize = document.createElement('td');
@@ -1038,6 +1291,34 @@ function wireEvents() {
         const file = e.target.files[0];
         if (file) handleReuploadedLog(file);
     });
+
+    dom.saveRecipeBtn.addEventListener('click', () => {
+        const name = dom.recipeNameInput.value.trim();
+        if (!name) { showAlert('error', 'Dai un nome alla ricetta prima di salvarla.'); return; }
+        const recipes = getRecipes().filter((r) => r.name !== name);
+        recipes.push(currentSettingsAsRecipe(name));
+        saveRecipes(recipes);
+        refreshRecipeSelect();
+        dom.recipeSelect.value = name;
+        dom.recipeNameInput.value = '';
+        showAlert('success', `Ricetta "${name}" salvata.`);
+    });
+    dom.loadRecipeBtn.addEventListener('click', () => {
+        const name = dom.recipeSelect.value;
+        if (!name) return;
+        const recipe = getRecipes().find((r) => r.name === name);
+        applyRecipe(recipe);
+    });
+    dom.deleteRecipeBtn.addEventListener('click', () => {
+        const name = dom.recipeSelect.value;
+        if (!name) return;
+        saveRecipes(getRecipes().filter((r) => r.name !== name));
+        refreshRecipeSelect();
+        showAlert('info', `Ricetta "${name}" eliminata.`);
+    });
+
+    dom.findDuplicatesBtn.addEventListener('click', findDuplicates);
+    dom.deleteDuplicatesBtn.addEventListener('click', deleteSelectedDuplicates);
 }
 
 // ---------------------------------------------------------------------------
@@ -1046,9 +1327,11 @@ function wireEvents() {
 document.addEventListener('DOMContentLoaded', () => {
     initDom();
     refreshIcons();
+    initThemeToggle();
     const supported = checkSupport();
     if (supported) {
         wireEvents();
+        refreshRecipeSelect();
     }
 });
 

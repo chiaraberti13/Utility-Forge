@@ -274,6 +274,21 @@ minificazione)
 
 ## 📝 CHANGELOG
 
+### Versione 1.1
+- 🌗 Tema scuro (segue la preferenza di sistema di default, con un toggle manuale salvato nel browser)
+- 🎨 Token di design unificati con il resto della suite Utility Forge (componente alert, stati
+  `:focus-visible`, breakpoint standard a 680px)
+- 🖼️ Anteprime miniatura per i file immagine nell'elenco della cartella (limitate alle prime 200
+  immagini per non bloccare la scheda su cartelle enormi)
+- 📋 "Ricette" salvabili con nome — salva le impostazioni attuali (template, ordinamento,
+  collisioni, appiattimento) con un nome nel local storage del browser e ricaricale da un menu
+- 🔍 Rilevamento duplicati opzionale: hash SHA-256 del contenuto per trovare copie identiche, con
+  selezione manuale file per file e conferma esplicita prima di eliminare — completamente separato
+  dal flusso di rinomina, non si attiva mai per errore
+- 🐛 Corretto un bug reale della v1.0: l'anteprima poteva chiedere di spuntare una casella "conferma
+  corrispondenze approssimate" che in realtà non esisteva nella pagina, bloccando permanentemente
+  l'esecuzione quando era presente un match CSV approssimato
+
 ### Versione 1.0
 - 🎉 Prima versione
 - ✅ Selezione ed elenco cartelle tramite File System Access API (nome, dimensione, data, EXIF opzionale)

@@ -176,11 +176,18 @@ e documentato. In concreto:
 ## 6. Caratteristiche principali in breve
 
 - Ispezione **di sola lettura** prima di qualunque modifica, su **immagini, PDF e Office**
+- **Coda di revisione**: tabella riassuntiva di tutti i file caricati con le categorie rilevate,
+  da controllare prima di lanciare una pulizia in batch confermata
 - Pulizia **selettiva per categoria**, non tutto-o-niente
+- **Vista diff prima/dopo**: dopo la pulizia, mostra esattamente quali campi sono cambiati,
+  verificati ri-ispezionando l'output effettivo, non previsti a priori
 - **100% locale**: nessun file viene mai caricato su un server
 - **GPS mostrato solo come testo**, nessuna chiamata automatica a servizi di mappe
-- Elaborazione **in batch** con **ZIP** e report **CSV/JSON**
+- Elaborazione **in batch** con **ZIP** e report **CSV/JSON/HTML** (il report HTML è presentabile
+  a un cliente come prova del passaggio di pulizia, senza riprodurre i valori sensibili originali)
 - **Profili con nome** salvati nel browser per riusare una configurazione
+- **Tema chiaro/scuro** con preferenza salvata localmente, e interfaccia allineata al design
+  system condiviso della suite Utility Forge (colori, focus da tastiera, dimensioni delle icone)
 - Limiti e comportamenti **documentati onestamente**, senza promesse non mantenibili
 
 ---

@@ -36,32 +36,75 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --uf-bg:#fafafa; --uf-card-bg:#ffffff; --uf-border:#e5e5e5; --uf-text:#1a1a1a; --uf-text-muted:#737373;
+            --uf-accent:#3b82f6; --uf-accent-hover:#2563eb; --uf-accent-soft:#f0f9ff; --uf-accent-softer:#eff6ff; --uf-dragover-bg:#dbeafe;
+            --uf-success-bg:#f0fdf4; --uf-success-border:#bbf7d0; --uf-success-text:#166534;
+            --uf-error-bg:#fef2f2; --uf-error-border:#fecaca; --uf-error-text:#991b1b;
+            --uf-warning-bg:#fffbeb; --uf-warning-border:#fde68a; --uf-warning-text:#92400e;
+            --uf-info-bg:#eff6ff; --uf-info-border:#bfdbfe; --uf-info-text:#1e40af;
+            --uf-progress-track:#f5f5f5; --uf-upload-border:#d4d4d4; --uf-danger:#dc2626;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+                --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+                --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+                --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+                --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+                --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+                --uf-progress-track:#3a3a40; --uf-upload-border:#52525b; --uf-danger:#f87171;
+            }
+        }
+        :root[data-theme="dark"] {
+            --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+            --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+            --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+            --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+            --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+            --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+            --uf-progress-track:#3a3a40; --uf-upload-border:#52525b; --uf-danger:#f87171;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--uf-accent); outline-offset: 2px;
+        }
+        .icon-btn {
+            background: transparent; border: 1px solid var(--uf-border); border-radius: 8px;
+            padding: 8px; cursor: pointer; color: var(--uf-text-muted);
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .icon-btn:hover { background: var(--uf-accent-soft); color: var(--uf-accent); border-color: var(--uf-accent); }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--uf-bg);
             min-height: 100vh;
             padding: 16px;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .container {
             max-width: 1000px;
             margin: 0 auto;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             overflow: hidden;
         }
 
         .header {
             padding: 32px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--uf-border);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
         }
 
         h1 {
             font-size: 24px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 8px;
             display: flex;
             align-items: center;
@@ -69,7 +112,7 @@
         }
 
         .subtitle {
-            color: #737373;
+            color: var(--uf-text-muted);
             font-size: 15px;
             font-weight: 400;
         }
@@ -85,7 +128,7 @@
         .section-title {
             font-size: 15px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 12px;
             display: flex;
             align-items: center;
@@ -93,17 +136,17 @@
         }
 
         .card {
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             padding: 20px;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #3b82f6;
+            background: var(--uf-accent);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -115,24 +158,24 @@
             white-space: nowrap;
         }
 
-        .btn:hover { background: #2563eb; }
+        .btn:hover { background: var(--uf-accent-hover); }
         .btn:active { transform: scale(0.98); }
-        .btn:disabled { background: #e5e5e5; color: #a3a3a3; cursor: not-allowed; }
+        .btn:disabled { background: var(--uf-border); color: var(--uf-text-muted); cursor: not-allowed; }
 
         .btn-secondary {
-            background: white;
-            color: #1a1a1a;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
+            border: 1px solid var(--uf-border);
         }
-        .btn-secondary:hover { background: #fafafa; border-color: #d4d4d4; }
-        .btn-secondary:disabled { background: #f5f5f5; color: #c4c4c4; border-color: #e5e5e5; }
+        .btn-secondary:hover { background: var(--uf-bg); border-color: var(--uf-upload-border); }
+        .btn-secondary:disabled { background: var(--uf-bg); color: var(--uf-text-muted); border-color: var(--uf-border); }
 
         .btn-danger {
-            background: white;
-            color: #dc2626;
-            border: 1px solid #fecaca;
+            background: var(--uf-card-bg);
+            color: var(--uf-danger);
+            border: 1px solid var(--uf-error-border);
         }
-        .btn-danger:hover { background: #fef2f2; }
+        .btn-danger:hover { background: var(--uf-error-bg); }
 
         .actions {
             display: flex;
@@ -159,40 +202,40 @@
             flex-wrap: wrap;
         }
         .field-row:last-child { margin-bottom: 0; }
-        .field-row label { font-size: 13px; color: #737373; min-width: 140px; }
+        .field-row label { font-size: 13px; color: var(--uf-text-muted); min-width: 140px; }
 
         select, input[type="text"], input[type="number"] {
             font-family: inherit;
             font-size: 14px;
             padding: 8px 10px;
-            border: 1px solid #d4d4d4;
+            border: 1px solid var(--uf-upload-border);
             border-radius: 6px;
-            background: white;
-            color: #1a1a1a;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
         }
-        select:focus, input:focus { outline: none; border-color: #3b82f6; }
+        select:focus, input:focus { outline: none; border-color: var(--uf-accent); }
 
         .upload-area {
-            border: 2px dashed #d4d4d4;
+            border: 2px dashed var(--uf-upload-border);
             border-radius: 8px;
             padding: 28px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: white;
+            background: var(--uf-card-bg);
         }
-        .upload-area:hover { border-color: #3b82f6; background: #f0f9ff; }
-        .upload-area.dragover { border-color: #3b82f6; background: #dbeafe; border-style: solid; }
-        .upload-hint { font-size: 13px; color: #737373; margin-top: 4px; }
+        .upload-area:hover { border-color: var(--uf-accent); background: var(--uf-accent-soft); }
+        .upload-area.dragover { border-color: var(--uf-accent); background: var(--uf-dragover-bg); border-style: solid; }
+        .upload-hint { font-size: 13px; color: var(--uf-text-muted); margin-top: 4px; }
         #csvInput, #reuploadLogInput { display: none; }
 
         #csvInfo {
             display: none;
             margin-top: 12px;
             font-size: 13px;
-            color: #15803d;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
+            color: var(--uf-success-text);
+            background: var(--uf-success-bg);
+            border: 1px solid var(--uf-success-border);
             border-radius: 6px;
             padding: 10px 12px;
         }
@@ -200,7 +243,7 @@
         .table-wrap {
             max-height: 340px;
             overflow: auto;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             margin-top: 12px;
         }
@@ -209,33 +252,34 @@
         thead th {
             position: sticky;
             top: 0;
-            background: #fafafa;
+            background: var(--uf-bg);
             text-align: left;
             padding: 10px 12px;
-            border-bottom: 1px solid #e5e5e5;
-            color: #737373;
+            border-bottom: 1px solid var(--uf-border);
+            color: var(--uf-text-muted);
             font-weight: 500;
             white-space: nowrap;
         }
         tbody td {
             padding: 8px 12px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #1a1a1a;
+            border-bottom: 1px solid var(--uf-border);
+            color: var(--uf-text);
             word-break: break-word;
         }
         tbody tr:last-child td { border-bottom: none; }
-        .preview-arrow { color: #a3a3a3; text-align: center; width: 24px; }
-        tr.preview-flagged td { background: #fffbeb; }
-        tr.preview-unchanged td { color: #a3a3a3; }
-        .preview-flags { color: #dc2626; font-size: 12px; }
+        .preview-arrow { color: var(--uf-text-muted); text-align: center; width: 24px; }
+        tr.preview-flagged td { background: var(--uf-warning-bg); }
+        tr.preview-unchanged td { color: var(--uf-text-muted); }
+        .preview-flags { color: var(--uf-danger); font-size: 12px; }
+        .thumb { width: 28px; height: 28px; object-fit: cover; border-radius: 4px; border: 1px solid var(--uf-border); vertical-align: middle; margin-right: 6px; background: var(--uf-bg); }
 
         .progress-container { display: none; margin-top: 20px; }
         .progress-bar {
-            width: 100%; height: 8px; background: #f5f5f5;
+            width: 100%; height: 8px; background: var(--uf-progress-track);
             border-radius: 4px; overflow: hidden; margin-bottom: 8px;
         }
-        .progress-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.2s ease; border-radius: 4px; }
-        .progress-text { font-size: 13px; color: #737373; text-align: center; }
+        .progress-fill { height: 100%; background: var(--uf-accent); width: 0%; transition: width 0.2s ease; border-radius: 4px; }
+        .progress-text { font-size: 13px; color: var(--uf-text-muted); text-align: center; }
 
         .alert {
             padding: 16px;
@@ -246,9 +290,10 @@
             align-items: center;
             gap: 12px;
         }
-        .alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .alert-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .alert-success { background: var(--uf-success-bg); color: var(--uf-success-text); border: 1px solid var(--uf-success-border); }
+        .alert-error { background: var(--uf-error-bg); color: var(--uf-danger); border: 1px solid var(--uf-error-border); }
+        .alert-info { background: var(--uf-info-bg); color: var(--uf-info-text); border: 1px solid var(--uf-info-border); }
+        .alert-warning { background: var(--uf-warning-bg); color: var(--uf-warning-text); border: 1px solid var(--uf-warning-border); }
 
         .unsupported-banner {
             display: none;
@@ -257,21 +302,21 @@
             max-width: 700px;
             margin: 40px auto;
             padding: 28px;
-            background: white;
-            border: 1px solid #fecaca;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-error-border);
             border-radius: 12px;
         }
-        .unsupported-banner h2 { font-size: 18px; margin-bottom: 8px; color: #1a1a1a; }
-        .unsupported-banner p { font-size: 14px; color: #525252; line-height: 1.6; margin-bottom: 8px; }
-        .unsupported-banner ul { font-size: 14px; color: #525252; line-height: 1.7; margin: 8px 0 8px 20px; }
+        .unsupported-banner h2 { font-size: 18px; margin-bottom: 8px; color: var(--uf-text); }
+        .unsupported-banner p { font-size: 14px; color: var(--uf-text-muted); line-height: 1.6; margin-bottom: 8px; }
+        .unsupported-banner ul { font-size: 14px; color: var(--uf-text-muted); line-height: 1.7; margin: 8px 0 8px 20px; }
 
         .footer {
             padding: 24px 32px;
             text-align: center;
-            color: #a3a3a3;
+            color: var(--uf-text-muted);
             font-size: 13px;
-            border-top: 1px solid #e5e5e5;
-            background: #fafafa;
+            border-top: 1px solid var(--uf-border);
+            background: var(--uf-bg);
         }
 
         .badge {
@@ -279,9 +324,9 @@
             align-items: center;
             gap: 6px;
             font-size: 13px;
-            color: #737373;
-            background: white;
-            border: 1px solid #e5e5e5;
+            color: var(--uf-text-muted);
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 6px;
             padding: 8px 12px;
         }
@@ -290,14 +335,14 @@
 
         code {
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-            background: #f0f0f0;
+            background: var(--uf-bg);
             padding: 1px 5px;
             border-radius: 4px;
             font-size: 12px;
         }
 
         /* Responsive */
-        @media (max-width: 640px) {
+        @media (max-width: 680px) {
             .header { padding: 24px 20px; }
             .content { padding: 20px; }
             h1 { font-size: 20px; }
@@ -309,7 +354,7 @@
 </head>
 <body>
     <div class="unsupported-banner" id="unsupportedBanner">
-        <i data-lucide="alert-triangle" size="32" style="color:#dc2626; flex-shrink:0;"></i>
+        <i data-lucide="alert-triangle" size="32" style="color:var(--uf-danger); flex-shrink:0;"></i>
         <div>
             <h2>Browser non supportato</h2>
             <p>
@@ -332,21 +377,24 @@
 
     <div class="container" id="appRoot" style="display:none;">
         <div class="header">
-            <h1>
-                <i data-lucide="folder-cog" style="color:#3b82f6;"></i>
-                Batch Renamer &amp; File Organizer Pro
-            </h1>
-            <p class="subtitle">Rinomina in blocco i file di una cartella reale, direttamente dal browser — con anteprima obbligatoria e rollback</p>
+            <div>
+                <h1>
+                    <i data-lucide="folder-cog" style="color:var(--uf-accent);" size="20"></i>
+                    Batch Renamer &amp; File Organizer Pro
+                </h1>
+                <p class="subtitle">Rinomina in blocco i file di una cartella reale, direttamente dal browser — con anteprima obbligatoria e rollback</p>
+            </div>
+            <button class="icon-btn" id="themeToggle" type="button" aria-label="Cambia tema chiaro/scuro" title="Tema chiaro/scuro"></button>
         </div>
 
         <div class="content">
 
             <!-- Alert -->
-            <div class="alert" id="alertBox"><i data-lucide="info" size="20"></i><span id="alertText"></span></div>
+            <div class="alert" id="alertBox" role="status" aria-live="polite"><i data-lucide="info" size="20"></i><span id="alertText"></span></div>
 
             <!-- Step 1: cartella -->
             <div class="section">
-                <div class="section-title"><i data-lucide="folder-open" size="18" style="color:#3b82f6;"></i> 1. Seleziona la cartella</div>
+                <div class="section-title"><i data-lucide="folder-open" size="18" style="color:var(--uf-accent);"></i> 1. Seleziona la cartella</div>
                 <div class="card">
                     <button class="btn" id="pickFolderBtn"><i data-lucide="folder-input" size="18"></i> Scegli cartella…</button>
                     <div class="folder-info" id="folderInfo">
@@ -385,12 +433,33 @@
                 </div>
             </div>
 
+            <!-- Rilevamento duplicati (opzionale, separato dal flusso di rinomina) -->
+            <div class="section" id="duplicatesSectionWrap" style="display:none;">
+                <div class="section-title"><i data-lucide="copy-check" size="18" style="color:var(--uf-accent);"></i> Rilevamento duplicati (opzionale)</div>
+                <div class="card">
+                    <div class="upload-hint" style="margin-bottom:12px;">
+                        Calcola l'hash SHA-256 del contenuto di ogni file per trovare copie esattamente identiche —
+                        funzione separata dalla rinomina, non viene mai eseguita automaticamente.
+                    </div>
+                    <div class="actions" style="margin-top:0;">
+                        <button class="btn btn-secondary" id="findDuplicatesBtn" type="button"><i data-lucide="copy-check" size="18"></i> Trova duplicati</button>
+                    </div>
+                    <div id="duplicatesResult" style="margin-top:16px; display:none;">
+                        <div class="upload-hint" id="duplicatesSummary" style="margin-bottom:8px;"></div>
+                        <div id="duplicatesGroups"></div>
+                        <div class="actions">
+                            <button class="btn btn-danger" id="deleteDuplicatesBtn" type="button" disabled><i data-lucide="trash-2" size="18"></i> Elimina le copie selezionate</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Step 2: CSV/XLSX mapping -->
             <div class="section">
-                <div class="section-title"><i data-lucide="table" size="18" style="color:#3b82f6;"></i> 2. Mapping da Excel/CSV (opzionale)</div>
+                <div class="section-title"><i data-lucide="table" size="18" style="color:var(--uf-accent);"></i> 2. Mapping da Excel/CSV (opzionale)</div>
                 <div class="card">
                     <div class="upload-area" id="csvUploadArea">
-                        <i data-lucide="upload" size="24" stroke-width="1.5" style="color:#3b82f6;"></i>
+                        <i data-lucide="upload" size="24" stroke-width="1.5" style="color:var(--uf-accent);"></i>
                         <div class="upload-hint">Trascina qui il file Excel/CSV con i nuovi nomi, o clicca per selezionarlo</div>
                         <input type="file" id="csvInput" accept=".xlsx,.xls,.csv">
                     </div>
@@ -418,7 +487,7 @@
 
             <!-- Step 3: template -->
             <div class="section">
-                <div class="section-title"><i data-lucide="text-cursor-input" size="18" style="color:#3b82f6;"></i> 3. Modello di rinomina (opzionale)</div>
+                <div class="section-title"><i data-lucide="text-cursor-input" size="18" style="color:var(--uf-accent);"></i> 3. Modello di rinomina (opzionale)</div>
                 <div class="card">
                     <div class="field-row">
                         <label for="templateInput">Pattern</label>
@@ -434,12 +503,23 @@
                         Placeholder disponibili: <code>{orig}</code> <code>{ext}</code> <code>{seq}</code>/<code>{seq:000}</code>
                         <code>{date}</code>/<code>{date:YYYYMMDD}</code> <code>{exifdate}</code> <code>{csv:NomeColonna}</code> — combinabili liberamente.
                     </div>
+                    <div class="field-row" style="margin-top:16px; border-top:1px solid var(--uf-border); padding-top:16px;">
+                        <label for="recipeSelect">Ricette salvate</label>
+                        <select id="recipeSelect" style="min-width:180px;"><option value="">— nessuna —</option></select>
+                        <button class="btn-secondary btn" id="loadRecipeBtn" type="button"><i data-lucide="folder-open" size="16"></i> Carica</button>
+                        <button class="btn-secondary btn" id="deleteRecipeBtn" type="button"><i data-lucide="trash-2" size="16"></i> Elimina</button>
+                    </div>
+                    <div class="field-row">
+                        <label for="recipeNameInput">Nome nuova ricetta</label>
+                        <input type="text" id="recipeNameInput" placeholder="es. Foto evento" style="flex:1; min-width:180px;">
+                        <button class="btn-secondary btn" id="saveRecipeBtn" type="button"><i data-lucide="save" size="16"></i> Salva impostazioni come ricetta</button>
+                    </div>
                 </div>
             </div>
 
             <!-- Step 4: preview -->
             <div class="section">
-                <div class="section-title"><i data-lucide="eye" size="18" style="color:#3b82f6;"></i> 4. Anteprima (obbligatoria) ed esecuzione</div>
+                <div class="section-title"><i data-lucide="eye" size="18" style="color:var(--uf-accent);"></i> 4. Anteprima (obbligatoria) ed esecuzione</div>
                 <div class="card">
                     <div class="toggle-row">
                         <input type="checkbox" id="collisionToggle" checked>
@@ -475,7 +555,7 @@
 
             <!-- Step 5: risultati / rollback -->
             <div class="section" id="resultsSection" style="display:none;">
-                <div class="section-title"><i data-lucide="history" size="18" style="color:#3b82f6;"></i> 5. Risultati e rollback</div>
+                <div class="section-title"><i data-lucide="history" size="18" style="color:var(--uf-accent);"></i> 5. Risultati e rollback</div>
                 <div class="card">
                     <div class="upload-hint" id="resultsSummary" style="margin-bottom:12px;"></div>
                     <div class="actions">
@@ -498,7 +578,7 @@
 
         <div class="footer">
             <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
-            <div style="color:#d4d4d4;">Tutta l'elaborazione avviene nel tuo browser: nessun file viene caricato su un server</div>
+            <div style="color:var(--uf-text-muted);">Tutta l'elaborazione avviene nel tuo browser: nessun file viene caricato su un server</div>
         </div>
     </div>
 

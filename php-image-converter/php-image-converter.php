@@ -39,10 +39,16 @@ ini_set('upload_max_filesize', '100M');
 ini_set('post_max_size', '100M');
 
 // --- Header di sicurezza per ogni risposta ---
+// Nonce CSP generato ad ogni richiesta: gli unici due <script> inline della pagina (lo script
+// anti-flash del tema in <head> e lo script applicativo in fondo al <body>, che contiene il CSRF
+// token e altri valori interpolati da PHP, quindi non è mai testualmente identico da una richiesta
+// all'altra) sono autorizzati tramite questo nonce invece che tramite un hash SHA-256 statico, che
+// non potrebbe mai corrispondere al contenuto dinamico.
+$cspNonce = base64_encode(random_bytes(16));
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
-header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; base-uri 'none'; form-action 'self'");
+header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'nonce-$cspNonce' https://unpkg.com; base-uri 'none'; form-action 'self'");
 header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
 
 // Costanti
@@ -940,23 +946,70 @@ cleanupOldFiles();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Converter</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@200..800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (versione fissata, stessa versione usata in tutta la suite) -->
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
+    <script nonce="<?php echo htmlspecialchars($cspNonce, ENT_QUOTES, 'UTF-8'); ?>">
+        // Applica il tema salvato prima del paint per evitare un flash del tema sbagliato
+        (function () {
+            try {
+                var saved = localStorage.getItem('uf-theme');
+                if (saved === 'dark' || saved === 'light') {
+                    document.documentElement.setAttribute('data-theme', saved);
+                }
+            } catch (e) {}
+        })();
+    </script>
     <style>
-        /* === STILE NEUTRO + ACCENTO ROSSO (come upload.php) === */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
+        /* Token di design condivisi da tutta la suite Utility Forge: stesso nome/stesso valore in
+           ogni tool, così l'aspetto resta identico ovunque e il tema chiaro/scuro si applica con
+           un'unica sorgente di verità invece di colori hardcoded sparsi nel CSS. */
+        :root {
+            --uf-bg:#fafafa; --uf-card-bg:#ffffff; --uf-border:#e5e5e5; --uf-text:#1a1a1a; --uf-text-muted:#737373;
+            --uf-accent:#3b82f6; --uf-accent-hover:#2563eb; --uf-accent-soft:#f0f9ff; --uf-accent-softer:#eff6ff; --uf-dragover-bg:#dbeafe;
+            --uf-success-bg:#f0fdf4; --uf-success-border:#bbf7d0; --uf-success-text:#166534;
+            --uf-error-bg:#fef2f2; --uf-error-border:#fecaca; --uf-error-text:#991b1b;
+            --uf-warning-bg:#fffbeb; --uf-warning-border:#fde68a; --uf-warning-text:#92400e;
+            --uf-info-bg:#eff6ff; --uf-info-border:#bfdbfe; --uf-info-text:#1e40af;
+            --uf-progress-track:#f5f5f5; --uf-upload-border:#d4d4d4;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+                --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+                --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+                --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+                --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+                --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+                --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+            }
+        }
+        :root[data-theme="dark"] {
+            --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+            --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+            --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+            --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+            --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+            --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+            --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--uf-accent); outline-offset: 2px;
+        }
+        .icon-btn { background:transparent; border:1px solid var(--uf-border); border-radius:8px; padding:8px; cursor:pointer; color:var(--uf-text-muted); display:inline-flex; align-items:center; justify-content:center; }
+        .icon-btn:hover { background:var(--uf-accent-soft); color:var(--uf-accent); border-color:var(--uf-accent); }
+
         body {
-            font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
-            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--uf-bg);
             min-height: 100vh;
             padding: 20px;
-            color: #111827;
+            color: var(--uf-text);
             overflow-x: hidden;
         }
         
@@ -966,73 +1019,73 @@ cleanupOldFiles();
         }
         
         .header {
-            background: #FFFFFF;
+            position: relative;
+            background: var(--uf-card-bg);
             padding: 30px;
-            border-radius: 16px;
+            border-radius: 12px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,.06);
             text-align: center;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--uf-border);
         }
-        
+
+        .header #themeToggle { position: absolute; top: 20px; right: 20px; }
+
         .header h1 {
-            color: rgb(216, 1, 1);
+            color: var(--uf-accent);
             font-size: 2.5em;
             margin-bottom: 10px;
             font-weight: 700;
         }
-        
+
         .header p {
-            color: #6b7280;
+            color: var(--uf-text-muted);
             font-size: 1.1em;
         }
         
         .main-card {
-            background: #FFFFFF;
+            background: var(--uf-card-bg);
             padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,.06);
-            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            border: 1px solid var(--uf-border);
             margin-bottom: 30px;
         }
-        
+
         .upload-area {
-            border: 2px dashed #e5e7eb;
+            border: 2px dashed var(--uf-upload-border);
             border-radius: 14px;
             padding: 60px 20px;
             text-align: center;
-            background: #fbfbfb;
-            transition: border-color .2s, background-color .2s, transform .15s;
+            background: var(--uf-bg);
+            transition: border-color .2s, background-color .2s;
             cursor: pointer;
             margin-bottom: 30px;
         }
-        
+
         .upload-area:hover {
-            border-color: rgb(216, 1, 1);
-            background: #ffefef;
-            transform: translateY(-1px);
+            border-color: var(--uf-accent);
+            background: var(--uf-dragover-bg);
         }
-        
+
         .upload-area.dragover {
-            border-color: rgb(216, 1, 1);
-            background: #ffefef;
-            transform: translateY(-1px);
+            border-color: var(--uf-accent);
+            background: var(--uf-dragover-bg);
         }
-        
+
         .upload-icon {
-            font-size: 4em;
-            color: rgb(216, 1, 1);
+            display: inline-flex;
+            justify-content: center;
+            color: var(--uf-accent);
             margin-bottom: 20px;
         }
-        
+
         .upload-text {
             font-size: 1.3em;
-            color: #111827;
+            color: var(--uf-text);
             margin-bottom: 10px;
         }
-        
+
         .upload-hint {
-            color: #6b7280;
+            color: var(--uf-text-muted);
             font-size: 0.95em;
         }
         
@@ -1044,16 +1097,14 @@ cleanupOldFiles();
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            background-color: rgb(216, 1, 1);
-            border-color: rgb(216, 1, 1);
+            background-color: var(--uf-accent);
+            border-color: var(--uf-accent);
             color: white;
         }
-        
+
         .btn:hover:not(:disabled) {
-            background-color: rgb(141, 0, 0);
-            border-color: rgb(141, 0, 0);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(216, 1, 1, 0.3);
+            background-color: var(--uf-accent-hover);
+            border-color: var(--uf-accent-hover);
         }
         
         .btn:disabled {
@@ -1082,7 +1133,7 @@ cleanupOldFiles();
         }
         
         .file-item {
-            background: #fbfbfb;
+            background: var(--uf-bg);
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 15px;
@@ -1091,105 +1142,107 @@ cleanupOldFiles();
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 15px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--uf-border);
             transition: all 0.3s ease;
         }
-        
+
         .file-item:hover {
-            border-color: rgb(216, 1, 1);
+            border-color: var(--uf-accent);
             transform: translateY(-2px);
         }
-        
+
         .file-info {
             flex: 1;
             min-width: 200px;
         }
-        
+
         .file-name {
             font-weight: 600;
-            color: #111827;
+            color: var(--uf-text);
             margin-bottom: 5px;
         }
         
         .file-size {
-            color: #6b7280;
+            color: var(--uf-text-muted);
             font-size: 0.9em;
         }
-        
+
         .file-status {
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.85em;
             margin-top: 5px;
         }
-        
-        .status-waiting { color: #856404; }
-        .status-converting { color: rgb(141, 0, 0); }
-        .status-done { color: #0f5132; }
-        .status-error { color: #842029; }
-        
+
+        .status-waiting { color: var(--uf-warning-text); }
+        .status-converting { color: var(--uf-accent-hover); }
+        .status-done { color: var(--uf-success-text); }
+        .status-error { color: var(--uf-error-text); }
+
         .progress-bar {
             width: 100%;
             height: 8px;
-            background: #e5e7eb;
-            border-radius: 10px;
+            background: var(--uf-progress-track);
+            border-radius: 4px;
             overflow: hidden;
             margin-top: 8px;
         }
-        
+
         .progress-fill {
             height: 100%;
-            background: rgb(216, 1, 1);
+            background: var(--uf-accent);
+            border-radius: 4px;
             transition: width 0.3s;
         }
-        
+
         .file-controls {
             display: flex;
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
         }
-        
+
         select {
             padding: 8px 12px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--uf-border);
             border-radius: 8px;
             font-size: 0.95em;
             font-weight: 600;
-            background: white;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
             cursor: pointer;
         }
-        
+
         select:focus {
             outline: none;
-            border-color: rgb(216, 1, 1);
+            border-color: var(--uf-accent);
         }
-        
+
         .options-panel {
-            background: #fbfbfb;
+            background: var(--uf-bg);
             padding: 30px;
             border-radius: 10px;
             margin: 30px 0;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--uf-border);
         }
-        
+
         .options-title {
             font-size: 1.5em;
-            color: rgb(216, 1, 1);
+            color: var(--uf-accent);
             margin-bottom: 20px;
             font-weight: 600;
             padding-bottom: 10px;
-            border-bottom: 2px solid #f8f9fa;
+            border-bottom: 2px solid var(--uf-bg);
         }
-        
+
         .option-group {
             margin-bottom: 25px;
         }
-        
+
         .option-label {
             display: block;
             font-weight: 600;
-            color: #111827;
+            color: var(--uf-text);
             margin-bottom: 10px;
         }
         
@@ -1203,23 +1256,25 @@ cleanupOldFiles();
         input[type="number"],
         input[type="text"] {
             padding: 10px;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--uf-border);
             border-radius: 8px;
             font-size: 0.95em;
             width: 120px;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
         }
-        
+
         input[type="number"]:focus,
         input[type="text"]:focus {
             outline: none;
-            border-color: rgb(216, 1, 1);
+            border-color: var(--uf-accent);
         }
-        
+
         input[type="range"] {
             -webkit-appearance: none;
             width: 100%;
             height: 6px;
-            background: #D3D3D3;
+            background: var(--uf-border);
             outline: none;
             transition: background 0.15s ease-in-out;
             margin-top: 15px;
@@ -1227,48 +1282,48 @@ cleanupOldFiles();
             flex: 1;
             min-width: 200px;
         }
-        
-        input[type="range"]:focus { 
-            box-shadow: none; 
+
+        input[type="range"]:focus {
+            box-shadow: none;
         }
-        
+
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 20px;
             height: 20px;
-            background: rgb(216, 1, 1);
+            background: var(--uf-accent);
             cursor: pointer;
             border-radius: 50%;
             box-shadow: none;
         }
-        
+
         input[type="range"]:focus::-webkit-slider-thumb {
-            background: rgb(216, 1, 1);
-            box-shadow: 0 0 3px 3px #fab8b8;
+            background: var(--uf-accent);
+            box-shadow: 0 0 3px 3px var(--uf-dragover-bg);
         }
-        
+
         input[type="range"]::-moz-range-thumb {
             width: 20px;
             height: 20px;
-            background: rgb(216, 1, 1);
+            background: var(--uf-accent);
             cursor: pointer;
             border-radius: 50%;
             border: none;
             box-shadow: none;
         }
-        
+
         input[type="range"]:focus::-moz-range-thumb {
-            background: rgb(216, 1, 1);
-            box-shadow: 0 0 3px 3px #fab8b8;
+            background: var(--uf-accent);
+            box-shadow: 0 0 3px 3px var(--uf-dragover-bg);
         }
-        
+
         input[type="checkbox"],
         input[type="radio"] {
             width: 18px;
             height: 18px;
             cursor: pointer;
-            accent-color: rgb(216, 1, 1);
+            accent-color: var(--uf-accent);
         }
         
         .checkbox-group,
@@ -1294,7 +1349,7 @@ cleanupOldFiles();
             gap: 15px;
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 2px solid #eee;
+            border-top: 2px solid var(--uf-border);
         }
         
         .bulk-actions {
@@ -1324,20 +1379,20 @@ cleanupOldFiles();
             text-align: center;
             margin-top: 40px;
             padding: 20px;
-            color: #6b7280;
+            color: var(--uf-text-muted);
         }
-        
+
         .hidden {
             display: none;
         }
-        
+
         .quality-value {
             font-weight: 600;
-            color: rgb(216, 1, 1);
+            color: var(--uf-accent);
             margin-left: 10px;
         }
-        
-        @media (max-width: 768px) {
+
+        @media (max-width: 680px) {
             .header h1 {
                 font-size: 1.8em;
             }
@@ -1369,12 +1424,15 @@ cleanupOldFiles();
 <body>
     <div class="container">
         <div class="header">
-            <h1>🖼️ Image Converter</h1>
+            <button class="icon-btn" id="themeToggle" type="button" aria-label="Cambia tema chiaro/scuro" title="Tema chiaro/scuro">
+                <i data-lucide="moon" size="18"></i>
+            </button>
+            <h1><i data-lucide="image" size="32" style="vertical-align:middle;"></i> Image Converter</h1>
         </div>
         
         <div class="main-card">
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📁</div>
+                <div class="upload-icon"><i data-lucide="image-plus" size="56" stroke-width="1.5"></i></div>
                 <div class="upload-text">Trascina i file qui o clicca per selezionarli</div>
                 <div class="upload-hint">Supporta JPG, PNG, WEBP, GIF, BMP, TIFF, HEIC (max <?php echo MAX_FILE_SIZE_MB; ?>MB a file, max <?php echo MAX_FILES_PER_SESSION; ?> file per sessione)</div>
                 <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
@@ -1384,7 +1442,7 @@ cleanupOldFiles();
                 <h2 style="color: #575756; margin-bottom: 20px;">Coda di Conversione</h2>
                 
                 <div class="bulk-actions">
-                    <label style="font-weight: 600; color: #575756;">Converti tutti in:</label>
+                    <label for="bulkFormat" style="font-weight: 600; color: #575756;">Converti tutti in:</label>
                     <select id="bulkFormat">
                         <option value="">Seleziona...</option>
                         <?php foreach (SUPPORTED_FORMATS as $format): ?>
@@ -1412,16 +1470,16 @@ cleanupOldFiles();
                                 </label>
                                 <div id="resizeOptions" class="hidden" style="margin-top: 15px;">
                                     <div class="option-row" style="margin-bottom: 10px;">
-                                        <label style="width: 80px;">Larghezza:</label>
+                                        <label for="resizeWidth" style="width: 80px;">Larghezza:</label>
                                         <input type="number" id="resizeWidth" placeholder="1920" min="1">
                                         <span>px</span>
                                     </div>
                                     <div class="option-row">
-                                        <label style="width: 80px;">Altezza:</label>
+                                        <label for="resizeHeight" style="width: 80px;">Altezza:</label>
                                         <input type="number" id="resizeHeight" placeholder="1080" min="1">
                                         <span>px</span>
                                     </div>
-                                    <small style="color: #999;">Lascia un valore vuoto per mantenere le proporzioni</small>
+                                    <small style="color: var(--uf-text-muted);">Lascia un valore vuoto per mantenere le proporzioni</small>
                                 </div>
                             </div>
                             
@@ -1433,7 +1491,7 @@ cleanupOldFiles();
                                 </label>
                                 <div id="cropOptions" class="hidden" style="margin-top: 15px;">
                                     <div class="option-row">
-                                        <label style="width: 120px;">Proporzioni:</label>
+                                        <label for="cropAspectRatio" style="width: 120px;">Proporzioni:</label>
                                         <select id="cropAspectRatio" style="width: 180px;">
                                             <option value="1:1">1:1 (Quadrato)</option>
                                             <option value="16:9">16:9 (Widescreen)</option>
@@ -1442,7 +1500,7 @@ cleanupOldFiles();
                                             <option value="3:4">3:4 (Ritratto)</option>
                                         </select>
                                     </div>
-                                    <small style="color: #999;">Ritaglia dal centro dell'immagine</small>
+                                    <small style="color: var(--uf-text-muted);">Ritaglia dal centro dell'immagine</small>
                                 </div>
                             </div>
                         </div>
@@ -1475,11 +1533,11 @@ cleanupOldFiles();
                             
                             <!-- Quality -->
                             <div>
-                                <label style="font-weight: 600; display: block; margin-bottom: 10px;">
+                                <label for="quality" style="font-weight: 600; display: block; margin-bottom: 10px;">
                                     Qualità Immagine <span class="quality-value" id="qualityValue">92%</span>
                                 </label>
                                 <input type="range" id="quality" min="1" max="100" value="92" style="width: 100%;">
-                                <small style="color: #999;">Qualità inferiore riduce la dimensione del file (JPEG & WEBP)</small>
+                                <small style="color: var(--uf-text-muted);">Qualità inferiore riduce la dimensione del file (JPEG & WEBP)</small>
                             </div>
                         </div>
                     </div>
@@ -1490,25 +1548,58 @@ cleanupOldFiles();
                         <span id="convertBtnText">Converti</span>
                     </button>
                     <button class="btn btn-secondary hidden" id="downloadAllBtn" onclick="downloadAll()">
-                        📦 Scarica Tutto (ZIP)
+                        <i data-lucide="download" size="18"></i> Scarica Tutto (ZIP)
                     </button>
                 </div>
             </div>
         </div>
-        
+
         <div class="footer">
-            <p style="margin-top: 10px; font-size: 0.9em; color: #999;">
+            <p style="margin-top: 10px; font-size: 0.9em; color: var(--uf-text-muted);">
                 Tutte le conversioni avvengono sul server. I tuoi file vengono eliminati automaticamente dopo 1 ora.<br>
-                🔒 Ogni file caricato viene verificato in base al contenuto reale, non solo all'estensione; la
+                <i data-lucide="shield-check" size="14" style="vertical-align:text-bottom;"></i> Ogni file caricato viene verificato in base al contenuto reale, non solo all'estensione; la
                 conversione ricodifica sempre l'immagine, quindi eventuali metadati EXIF/GPS dell'originale non
                 vengono trasferiti nel file convertito.
             </p>
         </div>
     </div>
 
-    <script>
+    <script nonce="<?php echo htmlspecialchars($cspNonce, ENT_QUOTES, 'UTF-8'); ?>">
         // Token anti-CSRF, generato lato server e richiesto da ogni chiamata che modifica lo stato
         const CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>';
+
+        if (window.lucide) { lucide.createIcons(); }
+
+        (function initThemeToggle() {
+            const btn = document.getElementById('themeToggle');
+            if (!btn) return;
+            function getPreferredTheme() {
+                try {
+                    const saved = localStorage.getItem('uf-theme');
+                    if (saved === 'dark' || saved === 'light') return saved;
+                } catch (e) {}
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                // lucide.createIcons() replaces the <i data-lucide> element with a brand-new <svg>
+                // each time, so any previously-queried reference to it goes stale — rebuild the
+                // icon element itself on every call instead of mutating a cached one.
+                btn.innerHTML = '';
+                const icon = document.createElement('i');
+                icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+                icon.setAttribute('size', '18');
+                btn.appendChild(icon);
+                if (window.lucide) lucide.createIcons();
+            }
+            let currentTheme = getPreferredTheme();
+            applyTheme(currentTheme);
+            btn.addEventListener('click', () => {
+                currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                try { localStorage.setItem('uf-theme', currentTheme); } catch (e) {}
+                applyTheme(currentTheme);
+            });
+        })();
 
         function escapeHtml(value) {
             const div = document.createElement('div');
@@ -1637,19 +1728,20 @@ cleanupOldFiles();
                         </div>
                     </div>
                     <div class="file-controls">
-                        <label style="font-weight: 600;">A:</label>
-                        <select data-file-id="${file.id}" onchange="updateFileFormat('${file.id}', this.value)" ${file.status !== 'waiting' && file.status !== 'error' ? 'disabled' : ''}>
+                        <label for="format-${file.id}" style="font-weight: 600;">A:</label>
+                        <select id="format-${file.id}" data-file-id="${file.id}" onchange="updateFileFormat('${file.id}', this.value)" ${file.status !== 'waiting' && file.status !== 'error' ? 'disabled' : ''}>
                             <?php foreach (SUPPORTED_FORMATS as $format): ?>
                             <option value="<?php echo $format; ?>" ${file.targetFormat === '<?php echo $format; ?>' ? 'selected' : ''}><?php echo $format; ?></option>
                             <?php endforeach; ?>
                         </select>
-                        ${file.status === 'done' ? `<button class="btn btn-small" onclick="downloadFile('${file.id}')">📥 Scarica</button>` : ''}
-                        <button class="btn btn-secondary btn-small" onclick="removeFile('${file.id}')">🗑️</button>
+                        ${file.status === 'done' ? `<button class="btn btn-small" onclick="downloadFile('${file.id}')"><i data-lucide="download" size="16"></i> Scarica</button>` : ''}
+                        <button class="btn btn-secondary btn-small" onclick="removeFile('${file.id}')" aria-label="Rimuovi file" title="Rimuovi file"><i data-lucide="trash-2" size="16"></i></button>
                     </div>
                 `;
                 fileList.appendChild(fileItem);
             });
-            
+            if (window.lucide) { lucide.createIcons(); }
+
             updateConvertButton();
         }
         

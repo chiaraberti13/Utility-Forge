@@ -12,6 +12,44 @@
  */
 
 // ---------------------------------------------------------------------------------------------
+// Tema chiaro/scuro — applicato come primissima cosa eseguita da questo script (che è comunque
+// caricato in fondo al body per scelta architetturale/CSP, quindi un flash iniziale non è del
+// tutto eliminabile senza uno script inline, che romperebbe la CSP script-src rigorosa: qui si
+// riduce al minimo eseguendo questo blocco prima di qualunque altra cosa). I canvas (contenuto PDF
+// /immagine e box di redazione) non usano MAI questi token: i colori disegnati sui canvas sono
+// scelti esplicitamente nel codice e restano identici in entrambi i temi.
+// ---------------------------------------------------------------------------------------------
+
+const THEME_STORAGE_KEY = 'uf-theme';
+
+function getStoredTheme() {
+    try { return localStorage.getItem(THEME_STORAGE_KEY); } catch (e) { return null; }
+}
+
+function setStoredTheme(theme) {
+    try {
+        if (theme) localStorage.setItem(THEME_STORAGE_KEY, theme);
+        else localStorage.removeItem(THEME_STORAGE_KEY);
+    } catch (e) { /* localStorage non disponibile (es. navigazione privata): non è bloccante */ }
+}
+
+function applyTheme(theme) {
+    if (theme === 'dark' || theme === 'light') {
+        document.documentElement.setAttribute('data-theme', theme);
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+}
+
+function currentEffectiveTheme() {
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (attr === 'dark' || attr === 'light') return attr;
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+applyTheme(getStoredTheme());
+
+// ---------------------------------------------------------------------------------------------
 // Costanti e limiti di sicurezza/robustezza
 // ---------------------------------------------------------------------------------------------
 
@@ -62,14 +100,34 @@ function baseName(filename) {
     return String(filename).replace(/\.[^./\\]+$/, '');
 }
 
-function showAlertBox(alertEl, message) {
+// Timer di auto-hide per ciascun alert, così una nuova chiamata a showAlertBox sullo stesso
+// elemento cancella il timer precedente invece di farlo sparire troppo presto/tardi.
+const alertHideTimers = new WeakMap();
+
+// Componente alert unificato per tutta la suite Utility Forge: successo/info si nascondono da soli
+// dopo 6s, errore/warning dopo 8s (tempo di lettura più lungo per i messaggi critici). Passa
+// { persist: true } per un alert che deve restare visibile finché non lo si nasconde esplicitamente
+// (es. l'avviso "batch senza revisione manuale", che resta sempre visibile finché l'opzione è attiva).
+function showAlertBox(alertEl, message, options) {
     const span = alertEl.querySelector('span');
     if (span) span.textContent = message; else alertEl.textContent = message;
-    alertEl.style.display = 'flex';
+    alertEl.classList.add('show');
+
+    const existing = alertHideTimers.get(alertEl);
+    if (existing) { clearTimeout(existing); alertHideTimers.delete(alertEl); }
+
+    if (options && options.persist) return;
+
+    const isUrgent = alertEl.classList.contains('alert-error') || alertEl.classList.contains('alert-warning');
+    const delay = isUrgent ? 8000 : 6000;
+    const timer = setTimeout(() => { alertEl.classList.remove('show'); }, delay);
+    alertHideTimers.set(alertEl, timer);
 }
 
 function hideAlertBox(alertEl) {
-    alertEl.style.display = 'none';
+    const existing = alertHideTimers.get(alertEl);
+    if (existing) { clearTimeout(existing); alertHideTimers.delete(alertEl); }
+    alertEl.classList.remove('show');
 }
 
 function downloadBlob(blob, filename) {
@@ -278,6 +336,34 @@ function boxAlreadyPresent(boxes, rect) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Interruttore tema chiaro/scuro
+// ---------------------------------------------------------------------------------------------
+
+function updateThemeToggleIcon() {
+    const btn = $('themeToggle');
+    if (!btn) return;
+    const eff = currentEffectiveTheme();
+    clearChildren(btn);
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', eff === 'dark' ? 'sun' : 'moon');
+    icon.setAttribute('size', '18');
+    btn.appendChild(icon);
+    safeCreateIcons();
+}
+
+function setupThemeToggle() {
+    const btn = $('themeToggle');
+    if (!btn) return;
+    updateThemeToggleIcon();
+    btn.addEventListener('click', () => {
+        const next = currentEffectiveTheme() === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        setStoredTheme(next);
+        updateThemeToggleIcon();
+    });
+}
+
+// ---------------------------------------------------------------------------------------------
 // Tab switching
 // ---------------------------------------------------------------------------------------------
 
@@ -457,6 +543,56 @@ let currentPdfState = null;   // { file, name, pdfProxy, pages: [pageState] }
 let lastPdfResultBlob = null;
 let lastPdfResultName = '';
 
+// Ogni box (suggerito, confermato o disegnato a mano) riceve un id stabile e incrementale: serve a
+// riferirlo dal pannello globale dei rilevamenti e dalle scorciatoie da tastiera senza dipendere da
+// indici di array che cambiano quando un box viene rimosso.
+let nextBoxId = 1;
+
+// Etichette leggibili delle categorie di rilevamento, usate nel pannello, nello stato da tastiera e
+// nel riepilogo "N redazioni applicate: X email, Y IBAN, ..." mostrato dopo l'esportazione.
+const CATEGORY_LABELS = {
+    email: 'Email',
+    phone: 'Telefono',
+    iban: 'IBAN',
+    creditcard: 'Carta di credito',
+    codicefiscale: 'Codice fiscale',
+    manuale: 'Manuale',
+};
+
+function defaultReasonFor(category) {
+    return CATEGORY_LABELS[category] || category || 'Manuale';
+}
+
+function truncateSnippet(text, max) {
+    const s = String(text || '').trim();
+    const limit = max || 60;
+    return s.length > limit ? s.slice(0, limit - 1) + '…' : s;
+}
+
+// Stato del "focus da tastiera": quale pagina/box è correntemente selezionato per Invio/Canc/frecce.
+// Separato dallo stato dei box stessi perché deve sopravvivere a redraw e riflettersi sia sul
+// canvas (anello di evidenziazione) sia nel pannello globale (riga evidenziata) sia nella barra di
+// stato testuale (per chi usa uno screen reader).
+let kbdFocusPageIdx = null;
+let kbdFocusBoxId = null;
+
+function getPageBoxes(pageIdx) {
+    return (currentPdfState && currentPdfState.pages[pageIdx]) ? currentPdfState.pages[pageIdx].boxes : [];
+}
+
+function findBoxById(id) {
+    if (!currentPdfState || id == null) return null;
+    for (let pi = 0; pi < currentPdfState.pages.length; pi++) {
+        const boxes = currentPdfState.pages[pi].boxes;
+        for (let bi = 0; bi < boxes.length; bi++) {
+            if (boxes[bi].id === id) {
+                return { pageIdx: pi, boxIdx: bi, box: boxes[bi], pageState: currentPdfState.pages[pi] };
+            }
+        }
+    }
+    return null;
+}
+
 function redrawPageOverlay(pageState, previewRect) {
     const ctx = pageState.overlay.getContext('2d');
     ctx.clearRect(0, 0, pageState.overlay.width, pageState.overlay.height);
@@ -467,6 +603,17 @@ function redrawPageOverlay(pageState, previewRect) {
         ctx.strokeStyle = confirmed ? '#dc2626' : '#ea580c';
         ctx.lineWidth = 2;
         ctx.strokeRect(b.x, b.y, b.w, b.h);
+        // Anello blu tratteggiato per il box attualmente selezionato via tastiera/pannello — questi
+        // colori sono scelti esplicitamente in JS e NON dipendono dal tema chiaro/scuro: il
+        // contenuto del canvas deve restare identico in entrambi i temi.
+        if (b.id === kbdFocusBoxId) {
+            ctx.save();
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 3]);
+            ctx.strokeRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6);
+            ctx.restore();
+        }
     });
     if (previewRect) {
         ctx.fillStyle = 'rgba(59,130,246,0.25)';
@@ -490,6 +637,239 @@ function updatePdfCounts() {
     }
     $('pdfSuggestedCount').textContent = `${sugg} suggeriti`;
     $('pdfConfirmedCount').textContent = `${conf} confermati`;
+    renderDetectionPanel();
+}
+
+// ---- Pannello globale dei rilevamenti (tutte le pagine) ----------------------------------------
+
+function renderDetectionPanel() {
+    const body = $('detectionPanelBody');
+    const countBadge = $('detectionPanelCount');
+    const emptyMsg = $('detectionPanelEmpty');
+    if (!body) return;
+
+    clearChildren(body);
+    let total = 0;
+
+    if (currentPdfState) {
+        currentPdfState.pages.forEach((pageState, pageIdx) => {
+            pageState.boxes.forEach((box) => {
+                total++;
+                body.appendChild(buildDetectionRow(pageState, pageIdx, box));
+            });
+        });
+    }
+
+    if (total === 0 && emptyMsg) body.appendChild(emptyMsg);
+    if (countBadge) countBadge.textContent = `${total} totali`;
+    safeCreateIcons();
+}
+
+function buildDetectionRow(pageState, pageIdx, box) {
+    const row = document.createElement('div');
+    row.className = 'detection-row';
+    if (box.id === kbdFocusBoxId) row.classList.add('focused');
+
+    const main = document.createElement('div');
+    main.className = 'detection-row-main';
+    const pageLine = document.createElement('div');
+    pageLine.className = 'detection-row-page';
+    const catLabel = CATEGORY_LABELS[box.category] || box.category;
+    const statusLabel = box.status === 'confirmed' ? 'confermato' : 'suggerito';
+    pageLine.textContent = `Pagina ${pageState.pageNum} · ${catLabel} · ${statusLabel}`;
+    const snippetLine = document.createElement('div');
+    snippetLine.className = 'detection-row-snippet';
+    snippetLine.textContent = box.snippet || '';
+    main.appendChild(pageLine);
+    main.appendChild(snippetLine);
+
+    const reasonInput = document.createElement('input');
+    reasonInput.type = 'text';
+    reasonInput.className = 'detection-row-reason';
+    reasonInput.value = box.reason || '';
+    reasonInput.placeholder = 'Motivo (opzionale)';
+    reasonInput.setAttribute('aria-label', `Motivo della redazione per il box a pagina ${pageState.pageNum}, categoria ${catLabel}`);
+    reasonInput.addEventListener('click', (e) => e.stopPropagation());
+    reasonInput.addEventListener('input', () => { box.reason = reasonInput.value; });
+
+    const actions = document.createElement('div');
+    actions.className = 'detection-row-actions';
+
+    if (box.status === 'suggested') {
+        const confirmBtn = document.createElement('button');
+        confirmBtn.type = 'button';
+        confirmBtn.setAttribute('aria-label', `Conferma il box a pagina ${pageState.pageNum}`);
+        confirmBtn.title = 'Conferma';
+        const ci = document.createElement('i');
+        ci.setAttribute('data-lucide', 'check');
+        ci.setAttribute('size', '16');
+        confirmBtn.appendChild(ci);
+        confirmBtn.addEventListener('click', (e) => { e.stopPropagation(); confirmBoxById(box.id); });
+        actions.appendChild(confirmBtn);
+    }
+
+    const rejectBtn = document.createElement('button');
+    rejectBtn.type = 'button';
+    rejectBtn.setAttribute('aria-label', `Rimuovi il box a pagina ${pageState.pageNum}`);
+    rejectBtn.title = 'Rimuovi';
+    const ri = document.createElement('i');
+    ri.setAttribute('data-lucide', 'x');
+    ri.setAttribute('size', '16');
+    rejectBtn.appendChild(ri);
+    rejectBtn.addEventListener('click', (e) => { e.stopPropagation(); rejectBoxById(box.id); });
+    actions.appendChild(rejectBtn);
+
+    row.appendChild(main);
+    row.appendChild(reasonInput);
+    row.appendChild(actions);
+    row.addEventListener('click', () => setKbdFocus(pageIdx, box.id));
+
+    return row;
+}
+
+// ---- Azioni condivise da click sul canvas, pannello e scorciatoie da tastiera ------------------
+
+function confirmBoxById(id) {
+    const found = findBoxById(id);
+    if (!found || found.box.status !== 'suggested') return;
+    found.box.status = 'confirmed';
+    redrawPageOverlay(found.pageState, null);
+    updatePdfCounts();
+    updateKbdStatus();
+}
+
+function rejectBoxById(id) {
+    const found = findBoxById(id);
+    if (!found) return;
+    found.pageState.boxes.splice(found.boxIdx, 1);
+    const remaining = found.pageState.boxes;
+    const nextFocusId = remaining.length ? remaining[Math.min(found.boxIdx, remaining.length - 1)].id : null;
+    redrawPageOverlay(found.pageState, null);
+    updatePdfCounts();
+    setKbdFocus(found.pageIdx, nextFocusId);
+}
+
+// ---- Scorciatoie da tastiera: stato del focus e navigazione -----------------------------------
+
+function scrollPageIntoView(pageIdx) {
+    if (!currentPdfState || !currentPdfState.pages[pageIdx]) return;
+    const block = currentPdfState.pages[pageIdx].blockEl;
+    if (block && block.scrollIntoView) block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function setKbdFocus(pageIdx, boxId) {
+    kbdFocusPageIdx = pageIdx;
+    kbdFocusBoxId = boxId != null ? boxId : null;
+    if (currentPdfState) {
+        currentPdfState.pages.forEach((p, i) => {
+            redrawPageOverlay(p, null);
+            if (p.blockEl) p.blockEl.classList.toggle('focus-target', i === pageIdx);
+        });
+    }
+    scrollPageIntoView(pageIdx);
+    updateKbdStatus();
+    renderDetectionPanel();
+}
+
+function updateKbdStatus() {
+    const el = $('kbdHintStatus');
+    if (!el) return;
+    if (!currentPdfState || kbdFocusPageIdx == null || !currentPdfState.pages[kbdFocusPageIdx]) {
+        el.textContent = 'Nessun box selezionato. Clicca un box, una riga del pannello, oppure usa PgUp/PgDn per iniziare a usare le scorciatoie.';
+        return;
+    }
+    const pageState = currentPdfState.pages[kbdFocusPageIdx];
+    if (kbdFocusBoxId == null) {
+        el.textContent = `Pagina ${pageState.pageNum} di ${pageState.totalPages} selezionata — nessun box in questa pagina. Frecce/[ ] per scegliere un box, PgUp/PgDn per cambiare pagina.`;
+        return;
+    }
+    const found = findBoxById(kbdFocusBoxId);
+    if (!found) { el.textContent = 'Il box selezionato non esiste più.'; return; }
+    const catLabel = CATEGORY_LABELS[found.box.category] || found.box.category;
+    const statusLabel = found.box.status === 'confirmed' ? 'confermato' : 'da confermare';
+    el.textContent = `Pagina ${pageState.pageNum} di ${pageState.totalPages} — box "${catLabel}" (${statusLabel}). Invio conferma, Canc rimuove, [ ] cambia box, PgUp/PgDn cambia pagina.`;
+}
+
+function moveBoxFocus(delta) {
+    if (!currentPdfState || !currentPdfState.pages.length) return;
+    const pageIdx = kbdFocusPageIdx != null ? kbdFocusPageIdx : 0;
+    const boxes = getPageBoxes(pageIdx);
+    if (!boxes.length) { setKbdFocus(pageIdx, null); return; }
+    let idx = kbdFocusBoxId != null ? boxes.findIndex((b) => b.id === kbdFocusBoxId) : -1;
+    idx = idx === -1 ? (delta > 0 ? 0 : boxes.length - 1) : Math.min(Math.max(idx + delta, 0), boxes.length - 1);
+    setKbdFocus(pageIdx, boxes[idx].id);
+}
+
+function movePageFocus(delta) {
+    if (!currentPdfState || !currentPdfState.pages.length) return;
+    const from = kbdFocusPageIdx != null ? kbdFocusPageIdx : 0;
+    const pageIdx = Math.min(Math.max(from + delta, 0), currentPdfState.pages.length - 1);
+    const boxes = getPageBoxes(pageIdx);
+    setKbdFocus(pageIdx, boxes.length ? boxes[0].id : null);
+}
+
+function setupPdfKeyboardShortcuts() {
+    document.addEventListener('keydown', (evt) => {
+        if (!currentPdfState) return;
+        const pdfPanelEl = $('panelPdf');
+        if (!pdfPanelEl || !pdfPanelEl.classList.contains('active')) return;
+        const editorCard = $('pdfEditorCard');
+        if (!editorCard || editorCard.classList.contains('hidden')) return;
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+
+        const key = evt.key;
+        if (key === 'Enter' || key === ' ') {
+            if (kbdFocusBoxId != null) { evt.preventDefault(); confirmBoxById(kbdFocusBoxId); }
+        } else if (key === 'Delete' || key === 'Backspace') {
+            if (kbdFocusBoxId != null) { evt.preventDefault(); rejectBoxById(kbdFocusBoxId); }
+        } else if (key === '[' || key === 'ArrowLeft' || key === 'ArrowUp') {
+            evt.preventDefault(); moveBoxFocus(-1);
+        } else if (key === ']' || key === 'ArrowRight' || key === 'ArrowDown') {
+            evt.preventDefault(); moveBoxFocus(1);
+        } else if (key === 'PageUp' || key === 'p') {
+            evt.preventDefault(); movePageFocus(-1);
+        } else if (key === 'PageDown' || key === 'n') {
+            evt.preventDefault(); movePageFocus(1);
+        }
+    });
+
+    const toggleBtn = $('detectionPanelToggle');
+    const panelBody = $('detectionPanelBody');
+    if (toggleBtn && panelBody) {
+        toggleBtn.addEventListener('click', () => {
+            const open = panelBody.classList.toggle('open');
+            toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    }
+
+    const helpBtn = $('kbdHelpToggle');
+    const helpBody = $('kbdHelpBody');
+    if (helpBtn && helpBody) {
+        helpBtn.addEventListener('click', () => {
+            const open = helpBody.classList.toggle('open');
+            helpBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    }
+}
+
+// ---- Riepilogo per categoria (usato sia dalla modalità interattiva sia dal batch) --------------
+
+function tallyCategories(pageEntries) {
+    const tally = {};
+    pageEntries.forEach((entry) => {
+        entry.confirmedBoxes.forEach((b) => {
+            const key = b.category || 'manuale';
+            tally[key] = (tally[key] || 0) + 1;
+        });
+    });
+    return tally;
+}
+
+function formatCategoryTally(tally) {
+    const keys = Object.keys(tally);
+    if (!keys.length) return '';
+    return keys.map((k) => `${tally[k]} ${(CATEGORY_LABELS[k] || k).toLowerCase()}`).join(', ');
 }
 
 function buildPageBlock(pageState) {
@@ -517,6 +897,7 @@ function buildPageBlock(pageState) {
     block.appendChild(scrollWrap);
 
     pageState.statsEl = stats;
+    pageState.blockEl = block;
     $('pdfPagesContainer').appendChild(block);
 }
 
@@ -526,12 +907,16 @@ function resetPdfEditor() {
     }
     currentPdfState = null;
     lastPdfResultBlob = null;
+    kbdFocusPageIdx = null;
+    kbdFocusBoxId = null;
     clearChildren($('pdfPagesContainer'));
     $('pdfEditorCard').classList.add('hidden');
     $('pdfDownloadBtn').classList.add('hidden');
     $('pdfVerifyResult').style.display = 'none';
     hideAlertBox($('pdfErrorAlert'));
     hideAlertBox($('pdfApplyErrorAlert'));
+    renderDetectionPanel();
+    updateKbdStatus();
 }
 
 async function handlePdfFileForEditing(file) {
@@ -599,18 +984,33 @@ async function handlePdfFileForEditing(file) {
             attachBoxDrawing(overlay, {
                 redraw: (preview) => redrawPageOverlay(pageState, preview),
                 onDragEnd: (rect) => {
-                    pageState.boxes.push({ x: rect.x, y: rect.y, w: rect.w, h: rect.h, status: 'confirmed', category: 'manuale' });
-                    redrawPageOverlay(pageState, null);
+                    const box = {
+                        id: nextBoxId++,
+                        x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                        status: 'confirmed',
+                        category: 'manuale',
+                        snippet: '(disegnato a mano)',
+                        reason: defaultReasonFor('manuale'),
+                    };
+                    pageState.boxes.push(box);
+                    const pageIdx = currentPdfState.pages.indexOf(pageState);
                     updatePdfCounts();
+                    setKbdFocus(pageIdx, box.id);
                 },
                 onClick: (x, y) => {
                     for (let i = pageState.boxes.length - 1; i >= 0; i--) {
                         const b = pageState.boxes[i];
                         if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
-                            if (b.status === 'suggested') b.status = 'confirmed';
-                            else pageState.boxes.splice(i, 1);
-                            redrawPageOverlay(pageState, null);
-                            updatePdfCounts();
+                            const pageIdx = currentPdfState.pages.indexOf(pageState);
+                            if (b.status === 'suggested') {
+                                b.status = 'confirmed';
+                                updatePdfCounts();
+                                setKbdFocus(pageIdx, b.id);
+                            } else {
+                                pageState.boxes.splice(i, 1);
+                                updatePdfCounts();
+                                setKbdFocus(pageIdx, null);
+                            }
                             return;
                         }
                     }
@@ -646,7 +1046,14 @@ async function runDetectionOnState(pdfState, categories) {
                 if (matches.length) {
                     const rect = itemToViewportRect(item, pageState.viewport);
                     if (rect && !boxAlreadyPresent(pageState.boxes, rect)) {
-                        pageState.boxes.push({ x: rect.x, y: rect.y, w: rect.w, h: rect.h, status: 'suggested', category: cat });
+                        pageState.boxes.push({
+                            id: nextBoxId++,
+                            x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+                            status: 'suggested',
+                            category: cat,
+                            snippet: truncateSnippet(matches[0].text, 60),
+                            reason: defaultReasonFor(cat),
+                        });
                     }
                     break;
                 }
@@ -727,8 +1134,10 @@ async function buildRedactedPdf(pageEntries, options, onProgress) {
 async function applyRedactionPipeline(pdfState, opts, onProgress) {
     const pageEntries = pdfState.pages.map((p) => ({
         canvas: p.canvas,
-        confirmedBoxes: p.boxes.filter((b) => b.status === 'confirmed').map((b) => ({ x: b.x, y: b.y, w: b.w, h: b.h })),
+        confirmedBoxes: p.boxes.filter((b) => b.status === 'confirmed').map((b) => ({ x: b.x, y: b.y, w: b.w, h: b.h, category: b.category })),
     }));
+    const categoryTally = tallyCategories(pageEntries);
+    const appliedCount = Object.values(categoryTally).reduce((s, n) => s + n, 0);
     const result = await buildRedactedPdf(pageEntries, opts, onProgress);
     // I box confermati sono ormai dipinti in modo permanente sul canvas (stessa istanza usata
     // sopra): li rimuoviamo dalla lista logica per riflettere che non sono più "box separati".
@@ -736,10 +1145,12 @@ async function applyRedactionPipeline(pdfState, opts, onProgress) {
         p.boxes = p.boxes.filter((b) => b.status !== 'confirmed');
         redrawPageOverlay(p, null);
     });
+    result.categoryTally = categoryTally;
+    result.appliedCount = appliedCount;
     return result;
 }
 
-function showVerifyResult(el, totalChars, pageCount) {
+function showVerifyResult(el, totalChars, pageCount, categoryTally, appliedCount) {
     clearChildren(el);
     el.className = 'verify-result ' + (totalChars === 0 ? 'verify-ok' : 'verify-fail');
     el.style.display = 'block';
@@ -751,7 +1162,13 @@ function showVerifyResult(el, totalChars, pageCount) {
     const span = document.createElement('span');
     span.style.marginLeft = '8px';
     if (totalChars === 0) {
-        span.textContent = `Verifica completata: 0 caratteri di testo estraibili trovati nel PDF redatto (su ${pageCount} pagine). Il documento è stato ricostruito interamente come immagini di pagina.`;
+        let auditLine = '';
+        if (appliedCount != null) {
+            auditLine = appliedCount > 0
+                ? ` ${appliedCount} redazioni applicate: ${formatCategoryTally(categoryTally)}.`
+                : ' Nessuna redazione confermata è stata applicata (solo rasterizzazione delle pagine).';
+        }
+        span.textContent = `Verifica completata: 0 caratteri di testo estraibili trovati nel PDF redatto (su ${pageCount} pagine).${auditLine} Il documento è stato ricostruito interamente come immagini di pagina.`;
     } else {
         span.textContent = `ATTENZIONE — verifica fallita: ${totalChars} caratteri di testo risultano ancora estraibili dal PDF redatto (su ${pageCount} pagine). Non usare questo file.`;
     }
@@ -821,7 +1238,7 @@ function setupPdfMode() {
             lastPdfResultBlob = result.blob;
             lastPdfResultName = sanitizeFilename(baseName(currentPdfState.name) + '-redatto.pdf');
             $('pdfDownloadBtn').classList.remove('hidden');
-            showVerifyResult($('pdfVerifyResult'), result.totalChars, result.pageCount);
+            showVerifyResult($('pdfVerifyResult'), result.totalChars, result.pageCount, result.categoryTally, result.appliedCount);
             updatePdfCounts();
         } catch (err) {
             showAlertBox($('pdfApplyErrorAlert'), `Errore durante l'applicazione della redazione: ${err.message}`);
@@ -864,7 +1281,7 @@ function createBatchRow(name) {
     dlBtn.type = 'button';
     const dlIcon = document.createElement('i');
     dlIcon.setAttribute('data-lucide', 'download');
-    dlIcon.setAttribute('size', '14');
+    dlIcon.setAttribute('size', '16');
     dlBtn.appendChild(dlIcon);
     dlBtn.appendChild(document.createTextNode(' Scarica'));
 
@@ -880,8 +1297,9 @@ function createBatchRow(name) {
             const verifyText = result.totalChars === 0
                 ? 'verifica OK, 0 caratteri estraibili'
                 : `verifica FALLITA, ${result.totalChars} caratteri estraibili`;
+            const tallyText = result.categoryTally ? formatCategoryTally(result.categoryTally) : '';
             const appliedText = result.appliedCount > 0
-                ? `${result.appliedCount} box oscurati`
+                ? `${result.appliedCount} box oscurati (${tallyText})`
                 : 'nessun box oscurato (revisione manuale disattivata)';
             statusEl.textContent = `${result.pageCount} pagine · ${result.detectedCount} rilevati · ${appliedText} · ${verifyText}`;
             dlBtn.classList.remove('hidden');
@@ -938,7 +1356,7 @@ async function processBatchFile(file, opts) {
                     const matches = findMatches(cat, item.str);
                     if (matches.length) {
                         const rect = itemToViewportRect(item, viewport);
-                        if (rect && !boxAlreadyPresent(foundBoxes, rect)) foundBoxes.push(rect);
+                        if (rect && !boxAlreadyPresent(foundBoxes, rect)) foundBoxes.push({ ...rect, category: cat });
                         break;
                     }
                 }
@@ -953,11 +1371,13 @@ async function processBatchFile(file, opts) {
 
     try { await pdfProxy.destroy(); } catch (e) { /* ignore */ }
 
+    const categoryTally = tallyCategories(pageEntries);
     const result = await buildRedactedPdf(pageEntries, opts, null);
     return {
         name: file.name,
         detectedCount,
         appliedCount: opts.autoApply ? detectedCount : 0,
+        categoryTally,
         totalChars: result.totalChars,
         pageCount: result.pageCount,
         blob: result.blob,
@@ -984,7 +1404,8 @@ function setupBatchMode() {
     }, { multiple: true });
 
     $('batchAutoApply').addEventListener('change', (e) => {
-        $('batchAutoApplyWarning').style.display = e.target.checked ? 'flex' : 'none';
+        // Avviso persistente: nessun timer di auto-hide, resta visibile finché l'opzione è attiva.
+        $('batchAutoApplyWarning').classList.toggle('show', e.target.checked);
     });
 
     $('batchRunBtn').addEventListener('click', async () => {
@@ -1039,7 +1460,9 @@ function setupBatchMode() {
 // impedire l'inizializzazione delle altre (es. tab, drag&drop di base restano utilizzabili anche
 // se una libreria CDN specifica non si è caricata).
 safeCreateIcons();
+try { setupThemeToggle(); } catch (e) { console.error('setupThemeToggle failed:', e); }
 try { setupTabs(); } catch (e) { console.error('setupTabs failed:', e); }
 try { setupImageMode(); } catch (e) { console.error('setupImageMode failed:', e); }
 try { setupPdfMode(); } catch (e) { console.error('setupPdfMode failed:', e); }
+try { setupPdfKeyboardShortcuts(); } catch (e) { console.error('setupPdfKeyboardShortcuts failed:', e); }
 try { setupBatchMode(); } catch (e) { console.error('setupBatchMode failed:', e); }

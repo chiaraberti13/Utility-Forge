@@ -259,6 +259,21 @@ entirely in your browser's memory
 
 ## 📝 CHANGELOG
 
+### Version 1.1
+- 🌗 Dark mode (follows system preference by default, with a manual toggle persisted per-browser)
+- 🎨 Design tokens unified with the rest of the Utility Forge suite (shared alert component
+  timing/colors, `:focus-visible` states, standard 680px breakpoint)
+- 🖼️ Thumbnail previews for image files in the folder listing (capped at the first 200 images so a
+  huge folder can't freeze the tab)
+- 📋 Named "recipes" — save the current template/sort/collision/flatten settings under a name in
+  your browser's local storage and reload them later from a dropdown
+- 🔍 Optional duplicate-file detection: SHA-256 content hashing groups exact-duplicate files, with
+  a manual per-file selection and confirmation step before deleting anything — kept fully separate
+  from the rename flow so it can never trigger by accident
+- 🐛 Fixed a real bug from v1.0: the preview step could tell a user to check a "confirm fuzzy
+  matches" checkbox that didn't actually exist in the page, permanently blocking the run whenever a
+  fuzzy CSV match was present
+
 ### Version 1.0
 - 🎉 First release
 - ✅ Folder picking and listing via the File System Access API (name, size, date, best-effort EXIF)

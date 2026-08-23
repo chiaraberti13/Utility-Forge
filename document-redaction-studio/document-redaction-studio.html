@@ -34,32 +34,78 @@
             box-sizing: border-box;
         }
 
+        /* Token di design condivisi da tutta la suite Utility Forge: stesso nome/stesso valore in
+           ogni tool, così l'aspetto resta identico ovunque e il tema chiaro/scuro si applica con
+           un'unica sorgente di verità invece di colori hardcoded sparsi nel CSS. */
+        :root {
+            --uf-bg:#fafafa; --uf-card-bg:#ffffff; --uf-border:#e5e5e5; --uf-text:#1a1a1a; --uf-text-muted:#737373;
+            --uf-accent:#3b82f6; --uf-accent-hover:#2563eb; --uf-accent-soft:#f0f9ff; --uf-accent-softer:#eff6ff; --uf-dragover-bg:#dbeafe;
+            --uf-success-bg:#f0fdf4; --uf-success-border:#bbf7d0; --uf-success-text:#166534;
+            --uf-error-bg:#fef2f2; --uf-error-border:#fecaca; --uf-error-text:#991b1b;
+            --uf-warning-bg:#fffbeb; --uf-warning-border:#fde68a; --uf-warning-text:#92400e;
+            --uf-info-bg:#eff6ff; --uf-info-border:#bfdbfe; --uf-info-text:#1e40af;
+            --uf-progress-track:#f5f5f5; --uf-upload-border:#d4d4d4;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+                --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+                --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+                --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+                --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+                --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+                --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+            }
+        }
+        :root[data-theme="dark"] {
+            --uf-bg:#18181b; --uf-card-bg:#242428; --uf-border:#3a3a40; --uf-text:#f4f4f5; --uf-text-muted:#a1a1aa;
+            --uf-accent:#60a5fa; --uf-accent-hover:#93c5fd; --uf-accent-soft:#1e2a3d; --uf-accent-softer:#1e293b; --uf-dragover-bg:#1e3a5f;
+            --uf-success-bg:#052e16; --uf-success-border:#166534; --uf-success-text:#86efac;
+            --uf-error-bg:#450a0a; --uf-error-border:#991b1b; --uf-error-text:#fca5a5;
+            --uf-warning-bg:#451a03; --uf-warning-border:#92400e; --uf-warning-text:#fcd34d;
+            --uf-info-bg:#1e293b; --uf-info-border:#1e40af; --uf-info-text:#93c5fd;
+            --uf-progress-track:#3a3a40; --uf-upload-border:#52525b;
+        }
+        a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid var(--uf-accent); outline-offset: 2px;
+        }
+        .icon-btn { background:transparent; border:1px solid var(--uf-border); border-radius:8px; padding:8px; cursor:pointer; color:var(--uf-text-muted); display:inline-flex; align-items:center; justify-content:center; }
+        .icon-btn:hover { background:var(--uf-accent-soft); color:var(--uf-accent); border-color:var(--uf-accent); }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #fafafa;
+            background: var(--uf-bg);
             min-height: 100vh;
             padding: 16px;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .container {
             max-width: 980px;
             margin: 0 auto;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             overflow: hidden;
         }
 
         .header {
             padding: 32px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--uf-border);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .header-text {
+            min-width: 0;
         }
 
         h1 {
             font-size: 24px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 8px;
             display: flex;
             align-items: center;
@@ -67,7 +113,7 @@
         }
 
         .subtitle {
-            color: #737373;
+            color: var(--uf-text-muted);
             font-size: 15px;
             font-weight: 400;
         }
@@ -92,14 +138,14 @@
         }
 
         .section-hint {
-            color: #737373;
+            color: var(--uf-text-muted);
             font-size: 13px;
             margin-bottom: 16px;
         }
 
         .card {
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 24px;
@@ -109,7 +155,7 @@
             display: flex;
             gap: 8px;
             margin-bottom: 24px;
-            border-bottom: 1px solid #e5e5e5;
+            border-bottom: 1px solid var(--uf-border);
         }
 
         .tab-btn {
@@ -118,7 +164,7 @@
             padding: 12px 18px;
             font-size: 14px;
             font-weight: 500;
-            color: #737373;
+            color: var(--uf-text-muted);
             cursor: pointer;
             border-bottom: 2px solid transparent;
             display: flex;
@@ -128,12 +174,12 @@
         }
 
         .tab-btn:hover {
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .tab-btn.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
+            color: var(--uf-accent);
+            border-bottom-color: var(--uf-accent);
         }
 
         .mode-panel {
@@ -145,23 +191,23 @@
         }
 
         .upload-area {
-            border: 2px dashed #d4d4d4;
+            border: 2px dashed var(--uf-upload-border);
             border-radius: 8px;
             padding: 40px 24px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            background: #fafafa;
+            background: var(--uf-bg);
         }
 
         .upload-area:hover {
-            border-color: #3b82f6;
-            background: #f0f9ff;
+            border-color: var(--uf-accent);
+            background: var(--uf-accent-soft);
         }
 
         .upload-area.dragover {
-            border-color: #3b82f6;
-            background: #dbeafe;
+            border-color: var(--uf-accent);
+            background: var(--uf-dragover-bg);
             border-style: solid;
         }
 
@@ -171,22 +217,22 @@
             justify-content: center;
             width: 56px;
             height: 56px;
-            background: white;
+            background: var(--uf-card-bg);
             border-radius: 12px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             margin-bottom: 14px;
         }
 
         .upload-text {
             font-size: 15px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 6px;
         }
 
         .upload-hint {
             font-size: 13px;
-            color: #737373;
+            color: var(--uf-text-muted);
         }
 
         input[type="file"] {
@@ -205,7 +251,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #3b82f6;
+            background: var(--uf-accent);
             color: white;
             border: none;
             padding: 11px 18px;
@@ -218,7 +264,7 @@
         }
 
         .btn:hover {
-            background: #2563eb;
+            background: var(--uf-accent-hover);
         }
 
         .btn:active {
@@ -226,20 +272,20 @@
         }
 
         .btn:disabled {
-            background: #e5e5e5;
-            color: #a3a3a3;
+            background: var(--uf-border);
+            color: var(--uf-text-muted);
             cursor: not-allowed;
         }
 
         .btn-secondary {
-            background: white;
-            color: #1a1a1a;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            color: var(--uf-text);
+            border: 1px solid var(--uf-border);
         }
 
         .btn-secondary:hover {
-            background: #fafafa;
-            border-color: #d4d4d4;
+            background: var(--uf-bg);
+            border-color: var(--uf-upload-border);
         }
 
         .btn-danger {
@@ -259,33 +305,34 @@
             display: block;
             font-size: 13px;
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             margin-bottom: 6px;
         }
 
         input[type="text"], input[type="number"] {
-            border: 1px solid #d4d4d4;
+            border: 1px solid var(--uf-upload-border);
             border-radius: 8px;
             padding: 9px 12px;
             font-size: 14px;
             font-family: inherit;
-            color: #1a1a1a;
+            color: var(--uf-text);
+            background: var(--uf-card-bg);
             width: 100%;
         }
 
         input[type="text"]:focus, input[type="number"]:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: var(--uf-accent);
         }
 
         input[type="color"] {
             width: 44px;
             height: 36px;
-            border: 1px solid #d4d4d4;
+            border: 1px solid var(--uf-upload-border);
             border-radius: 8px;
             padding: 2px;
             cursor: pointer;
-            background: white;
+            background: var(--uf-card-bg);
         }
 
         .field-row {
@@ -319,10 +366,10 @@
             position: relative;
             display: inline-block;
             max-width: 100%;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             overflow: hidden;
-            background: repeating-conic-gradient(#f5f5f5 0% 25%, #ffffff 0% 50%) 50% / 20px 20px;
+            background: repeating-conic-gradient(var(--uf-bg) 0% 25%, var(--uf-card-bg) 0% 50%) 50% / 20px 20px;
             touch-action: none;
         }
 
@@ -346,10 +393,16 @@
 
         .page-block {
             margin-bottom: 24px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             padding: 16px;
-            background: #fafafa;
+            background: var(--uf-bg);
+            scroll-margin-top: 16px;
+        }
+
+        .page-block.focus-target {
+            outline: 2px solid var(--uf-accent);
+            outline-offset: 2px;
         }
 
         .page-block-header {
@@ -359,12 +412,12 @@
             margin-bottom: 12px;
             font-size: 13px;
             font-weight: 600;
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .page-block-stats {
             font-size: 12px;
-            color: #737373;
+            color: var(--uf-text-muted);
             font-weight: 400;
         }
 
@@ -379,21 +432,21 @@
         }
 
         .badge-orange {
-            background: #fff7ed;
-            color: #c2410c;
-            border: 1px solid #fed7aa;
+            background: var(--uf-warning-bg);
+            color: var(--uf-warning-text);
+            border: 1px solid var(--uf-warning-border);
         }
 
         .badge-red {
-            background: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
+            background: var(--uf-error-bg);
+            color: var(--uf-error-text);
+            border: 1px solid var(--uf-error-border);
         }
 
         .badge-blue {
-            background: #eff6ff;
-            color: #1d4ed8;
-            border: 1px solid #bfdbfe;
+            background: var(--uf-info-bg);
+            color: var(--uf-info-text);
+            border: 1px solid var(--uf-info-border);
         }
 
         .alert {
@@ -407,43 +460,47 @@
             line-height: 1.5;
         }
 
+        .alert.show {
+            display: flex;
+        }
+
         .alert-success {
-            background: #f0fdf4;
-            color: #15803d;
-            border: 1px solid #bbf7d0;
+            background: var(--uf-success-bg);
+            color: var(--uf-success-text);
+            border: 1px solid var(--uf-success-border);
         }
 
         .alert-error {
-            background: #fef2f2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
+            background: var(--uf-error-bg);
+            color: var(--uf-error-text);
+            border: 1px solid var(--uf-error-border);
         }
 
         .alert-warning {
-            background: #fffbeb;
-            color: #b45309;
-            border: 1px solid #fde68a;
+            background: var(--uf-warning-bg);
+            color: var(--uf-warning-text);
+            border: 1px solid var(--uf-warning-border);
         }
 
         .alert-info {
-            background: #eff6ff;
-            color: #1d4ed8;
-            border: 1px solid #bfdbfe;
+            background: var(--uf-info-bg);
+            color: var(--uf-info-text);
+            border: 1px solid var(--uf-info-border);
         }
 
         .note-box {
-            background: #fafafa;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             padding: 14px 16px;
             font-size: 13px;
-            color: #525252;
+            color: var(--uf-text-muted);
             line-height: 1.6;
             margin-top: 16px;
         }
 
         .note-box strong {
-            color: #1a1a1a;
+            color: var(--uf-text);
         }
 
         .verify-result {
@@ -455,15 +512,15 @@
         }
 
         .verify-ok {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            color: #15803d;
+            background: var(--uf-success-bg);
+            border: 1px solid var(--uf-success-border);
+            color: var(--uf-success-text);
         }
 
         .verify-fail {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
+            background: var(--uf-error-bg);
+            border: 1px solid var(--uf-error-border);
+            color: var(--uf-error-text);
         }
 
         .batch-file-row {
@@ -472,8 +529,8 @@
             justify-content: space-between;
             gap: 12px;
             padding: 12px 14px;
-            background: white;
-            border: 1px solid #e5e5e5;
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
             border-radius: 8px;
             margin-bottom: 8px;
             font-size: 13px;
@@ -481,28 +538,28 @@
 
         .batch-file-name {
             font-weight: 500;
-            color: #1a1a1a;
+            color: var(--uf-text);
             word-break: break-all;
         }
 
         .batch-file-status {
-            color: #737373;
+            color: var(--uf-text-muted);
             white-space: nowrap;
         }
 
         .divider {
             border: none;
-            border-top: 1px solid #e5e5e5;
+            border-top: 1px solid var(--uf-border);
             margin: 24px 0;
         }
 
         .footer {
             padding: 24px 32px;
             text-align: center;
-            color: #a3a3a3;
+            color: var(--uf-text-muted);
             font-size: 13px;
-            border-top: 1px solid #e5e5e5;
-            background: #fafafa;
+            border-top: 1px solid var(--uf-border);
+            background: var(--uf-bg);
         }
 
         .toggle-warning {
@@ -513,7 +570,7 @@
         .progress-bar {
             width: 100%;
             height: 8px;
-            background: #f5f5f5;
+            background: var(--uf-progress-track);
             border-radius: 4px;
             overflow: hidden;
             margin-top: 12px;
@@ -522,7 +579,7 @@
 
         .progress-fill {
             height: 100%;
-            background: #3b82f6;
+            background: var(--uf-accent);
             width: 0%;
             transition: width 0.3s ease;
             border-radius: 4px;
@@ -532,7 +589,171 @@
             display: none !important;
         }
 
-        @media (max-width: 640px) {
+        /* --------------------------------------------------------------------------------------
+           Pannello globale dei rilevamenti + scorciatoie da tastiera (nuove funzionalità v1.1)
+           -------------------------------------------------------------------------------------- */
+
+        .detection-panel-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background: var(--uf-bg);
+            border: 1px solid var(--uf-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--uf-text);
+        }
+
+        .detection-panel-toggle:hover {
+            border-color: var(--uf-accent);
+        }
+
+        .detection-panel-toggle .chevron {
+            transition: transform 0.15s ease;
+        }
+
+        .detection-panel-toggle[aria-expanded="true"] .chevron {
+            transform: rotate(180deg);
+        }
+
+        .detection-panel-body {
+            display: none;
+            border: 1px solid var(--uf-border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 360px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+        }
+
+        .detection-panel-body.open {
+            display: block;
+        }
+
+        .detection-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--uf-border);
+            background: var(--uf-card-bg);
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .detection-row:last-child {
+            border-bottom: none;
+        }
+
+        .detection-row:hover, .detection-row.focused {
+            background: var(--uf-accent-softer);
+        }
+
+        .detection-row-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .detection-row-page {
+            color: var(--uf-text-muted);
+            font-size: 12px;
+        }
+
+        .detection-row-snippet {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 12px;
+            color: var(--uf-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 320px;
+        }
+
+        .detection-row-reason {
+            border: 1px solid var(--uf-upload-border);
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-size: 12px;
+            font-family: inherit;
+            color: var(--uf-text);
+            background: var(--uf-card-bg);
+            width: 140px;
+        }
+
+        .detection-row-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .detection-row-actions button {
+            border: 1px solid var(--uf-border);
+            background: var(--uf-card-bg);
+            border-radius: 6px;
+            padding: 5px 7px;
+            cursor: pointer;
+            color: var(--uf-text-muted);
+            display: inline-flex;
+        }
+
+        .detection-row-actions button:hover {
+            color: var(--uf-text);
+            border-color: var(--uf-accent);
+        }
+
+        .detection-empty {
+            padding: 24px 16px;
+            text-align: center;
+            color: var(--uf-text-muted);
+            font-size: 13px;
+        }
+
+        .kbd-hint-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: var(--uf-accent-softer);
+            border: 1px solid var(--uf-info-border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: var(--uf-info-text);
+        }
+
+        .kbd-hint-status {
+            flex: 1;
+            min-width: 0;
+        }
+
+        kbd {
+            background: var(--uf-card-bg);
+            border: 1px solid var(--uf-border);
+            border-bottom-width: 2px;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 11px;
+            color: var(--uf-text);
+        }
+
+        .kbd-help-body {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--uf-info-border);
+            line-height: 2;
+        }
+
+        .kbd-help-body.open {
+            display: block;
+        }
+
+        @media (max-width: 680px) {
             .header {
                 padding: 24px 20px;
             }
@@ -568,11 +789,16 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>
-                <i data-lucide="shield-off" style="color: #dc2626;"></i>
-                Document Redaction &amp; Sanitization Studio
-            </h1>
-            <p class="subtitle">Redazione vera: distrugge i pixel/il testo sottostante, non li nasconde sotto un rettangolo</p>
+            <div class="header-text">
+                <h1>
+                    <i data-lucide="shield-off" size="20" style="color: #dc2626;"></i>
+                    Document Redaction &amp; Sanitization Studio
+                </h1>
+                <p class="subtitle">Redazione vera: distrugge i pixel/il testo sottostante, non li nasconde sotto un rettangolo</p>
+            </div>
+            <button class="icon-btn" id="themeToggle" type="button" aria-label="Cambia tema chiaro/scuro" title="Tema chiaro/scuro">
+                <i data-lucide="moon" size="18"></i>
+            </button>
         </div>
 
         <div class="content">
@@ -603,21 +829,21 @@
             <!-- ============ MODE A: IMAGE ============ -->
             <div class="mode-panel active" id="panelImage">
                 <div class="card">
-                    <h2><i data-lucide="upload" size="18" style="color:#3b82f6;"></i> 1. Carica un'immagine</h2>
+                    <h2><i data-lucide="upload" size="18" style="color:var(--uf-accent);"></i> 1. Carica un'immagine</h2>
                     <p class="section-hint">JPEG, PNG o WEBP, fino a 30&nbsp;MB.</p>
                     <div class="upload-area" id="imgUploadArea">
                         <div class="upload-icon">
-                            <i data-lucide="image-plus" size="28" stroke-width="1.5" style="color:#3b82f6;"></i>
+                            <i data-lucide="image-plus" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i>
                         </div>
                         <div class="upload-text">Trascina l'immagine qui o clicca per selezionare</div>
                         <div class="upload-hint">.jpg, .jpeg, .png, .webp — max 30&nbsp;MB</div>
-                        <input type="file" id="imgFileInput" accept="image/jpeg,image/png,image/webp">
+                        <input type="file" id="imgFileInput" accept="image/jpeg,image/png,image/webp" aria-label="Seleziona un file immagine da redigere">
                     </div>
-                    <div class="alert alert-error" id="imgErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    <div class="alert alert-error" id="imgErrorAlert" role="status" aria-live="polite"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                 </div>
 
                 <div class="card hidden" id="imgEditorCard">
-                    <h2><i data-lucide="square-dashed-mouse-pointer" size="18" style="color:#3b82f6;"></i> 2. Disegna i rettangoli da oscurare</h2>
+                    <h2><i data-lucide="square-dashed-mouse-pointer" size="18" style="color:var(--uf-accent);"></i> 2. Disegna i rettangoli da oscurare</h2>
                     <p class="section-hint">Trascina col mouse (o col dito) sopra l'immagine per creare un box. Puoi crearne quanti vuoi.</p>
 
                     <div class="field-row" style="align-items:flex-end;">
@@ -644,7 +870,7 @@
                         <button class="btn btn-secondary hidden" id="imgDownloadBtn"><i data-lucide="download" size="18"></i> Scarica immagine redatta</button>
                     </div>
 
-                    <div class="alert alert-success" id="imgSuccessAlert"><i data-lucide="check-circle" size="18"></i><span></span></div>
+                    <div class="alert alert-success" id="imgSuccessAlert" role="status" aria-live="polite"><i data-lucide="check-circle" size="18"></i><span></span></div>
                     <div class="note-box">
                         "Applica redazione" dipinge rettangoli pieni <strong>direttamente sui pixel del canvas</strong>
                         (non su un livello separato) e poi ri-esporta l'immagine da zero con <code>canvas.toBlob()</code>:
@@ -659,23 +885,23 @@
             <!-- ============ MODE B: PDF (interactive) ============ -->
             <div class="mode-panel" id="panelPdf">
                 <div class="card">
-                    <h2><i data-lucide="upload" size="18" style="color:#3b82f6;"></i> 1. Carica un PDF</h2>
+                    <h2><i data-lucide="upload" size="18" style="color:var(--uf-accent);"></i> 1. Carica un PDF</h2>
                     <p class="section-hint">Fino a 50&nbsp;MB e 300 pagine. Le pagine vengono renderizzate a ~150dpi per l'editor.</p>
                     <div class="upload-area" id="pdfUploadArea">
                         <div class="upload-icon">
-                            <i data-lucide="file-plus-2" size="28" stroke-width="1.5" style="color:#3b82f6;"></i>
+                            <i data-lucide="file-plus-2" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i>
                         </div>
                         <div class="upload-text">Trascina il PDF qui o clicca per selezionare</div>
                         <div class="upload-hint">.pdf — max 50&nbsp;MB, max 300 pagine</div>
-                        <input type="file" id="pdfFileInput" accept="application/pdf,.pdf">
+                        <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" aria-label="Seleziona un file PDF da redigere">
                     </div>
                     <div class="progress-bar" id="pdfLoadProgress"><div class="progress-fill" id="pdfLoadProgressFill"></div></div>
-                    <div class="alert alert-error" id="pdfErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    <div class="alert alert-error" id="pdfErrorAlert" role="status" aria-live="polite"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                 </div>
 
                 <div class="card hidden" id="pdfEditorCard">
-                    <h2><i data-lucide="search" size="18" style="color:#3b82f6;"></i> 2. Rileva dati sensibili (opzionale)</h2>
-                    <p class="section-hint">Analizza il testo estratto da ogni pagina e propone box <span style="color:#c2410c;font-weight:600;">arancioni</span> — non sono ancora una redazione: vanno confermati a mano cliccandoci sopra (diventano <span style="color:#dc2626;font-weight:600;">rossi</span>).</p>
+                    <h2><i data-lucide="search" size="18" style="color:var(--uf-accent);"></i> 2. Rileva dati sensibili (opzionale)</h2>
+                    <p class="section-hint">Analizza il testo estratto da ogni pagina e propone box <span style="color:var(--uf-warning-text);font-weight:600;">arancioni</span> — non sono ancora una redazione: vanno confermati a mano cliccandoci sopra (diventano <span style="color:var(--uf-error-text);font-weight:600;">rossi</span>).</p>
 
                     <div class="checkbox-grid" id="pdfRuleset">
                         <label class="checkbox-row"><input type="checkbox" value="email" checked> Indirizzi email</label>
@@ -693,16 +919,39 @@
                         <span class="badge badge-red" id="pdfConfirmedCount">0 confermati</span>
                     </div>
 
+                    <button class="detection-panel-toggle" id="detectionPanelToggle" type="button" aria-expanded="false" aria-controls="detectionPanelBody" style="margin-top:16px;">
+                        <span style="display:flex;align-items:center;gap:8px;">
+                            <i data-lucide="list-checks" size="16"></i>
+                            Pannello rilevamenti — tutte le pagine
+                            <span class="badge badge-blue" id="detectionPanelCount">0 totali</span>
+                        </span>
+                        <i data-lucide="chevron-down" size="16" class="chevron"></i>
+                    </button>
+                    <div class="detection-panel-body" id="detectionPanelBody">
+                        <div class="detection-empty" id="detectionPanelEmpty">Nessun box ancora. Usa "Rileva dati sensibili" oppure disegna un box a mano su una pagina.</div>
+                    </div>
+
                     <hr class="divider">
 
-                    <h2><i data-lucide="square-dashed-mouse-pointer" size="18" style="color:#3b82f6;"></i> 3. Rivedi le pagine e disegna box manuali</h2>
+                    <h2><i data-lucide="square-dashed-mouse-pointer" size="18" style="color:var(--uf-accent);"></i> 3. Rivedi le pagine e disegna box manuali</h2>
                     <p class="section-hint">Puoi disegnare altri box a mano su qualsiasi pagina (diventano subito rossi/confermati). Clic su un box arancione = conferma. Clic su un box rosso = rimuovilo.</p>
+
+                    <div class="kbd-hint-bar" id="kbdHintBar">
+                        <span class="kbd-hint-status" id="kbdHintStatus" role="status" aria-live="polite">Nessun box selezionato. Clicca un box o una riga del pannello per iniziare a usare le scorciatoie.</span>
+                        <button class="icon-btn" id="kbdHelpToggle" type="button" aria-expanded="false" aria-controls="kbdHelpBody" aria-label="Mostra le scorciatoie da tastiera" title="Scorciatoie da tastiera">?</button>
+                    </div>
+                    <div class="kbd-help-body" id="kbdHelpBody" style="margin-top:-8px;margin-bottom:16px;">
+                        <div><kbd>Invio</kbd> / <kbd>Spazio</kbd> — conferma il box selezionato</div>
+                        <div><kbd>Canc</kbd> / <kbd>Backspace</kbd> — rimuovi il box selezionato</div>
+                        <div><kbd>←</kbd> <kbd>→</kbd> o <kbd>[</kbd> <kbd>]</kbd> — passa al box precedente/successivo nella pagina</div>
+                        <div><kbd>PgUp</kbd> <kbd>PgDn</kbd> o <kbd>p</kbd> <kbd>n</kbd> — vai alla pagina precedente/successiva</div>
+                    </div>
 
                     <div id="pdfPagesContainer"></div>
 
                     <hr class="divider">
 
-                    <h2><i data-lucide="stamp" size="18" style="color:#3b82f6;"></i> 4. Opzioni di esportazione e applicazione</h2>
+                    <h2><i data-lucide="stamp" size="18" style="color:var(--uf-accent);"></i> 4. Opzioni di esportazione e applicazione</h2>
 
                     <div class="field-row">
                         <div class="field">
@@ -737,7 +986,7 @@
                     </div>
 
                     <div class="progress-bar" id="pdfApplyProgress"><div class="progress-fill" id="pdfApplyProgressFill"></div></div>
-                    <div class="alert alert-error" id="pdfApplyErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    <div class="alert alert-error" id="pdfApplyErrorAlert" role="status" aria-live="polite"><i data-lucide="alert-circle" size="18"></i><span></span></div>
 
                     <div class="verify-result" id="pdfVerifyResult"></div>
                 </div>
@@ -746,21 +995,21 @@
             <!-- ============ MODE C: BATCH PDF ============ -->
             <div class="mode-panel" id="panelBatch">
                 <div class="card">
-                    <h2><i data-lucide="upload" size="18" style="color:#3b82f6;"></i> 1. Carica più PDF</h2>
+                    <h2><i data-lucide="upload" size="18" style="color:var(--uf-accent);"></i> 1. Carica più PDF</h2>
                     <p class="section-hint">Ogni file rispetta comunque i limiti di 50&nbsp;MB e 300 pagine. Vengono elaborati uno alla volta.</p>
                     <div class="upload-area" id="batchUploadArea">
                         <div class="upload-icon">
-                            <i data-lucide="files" size="28" stroke-width="1.5" style="color:#3b82f6;"></i>
+                            <i data-lucide="files" size="36" stroke-width="1.5" style="color:var(--uf-accent);"></i>
                         </div>
                         <div class="upload-text">Trascina qui più PDF o clicca per selezionarli</div>
                         <div class="upload-hint">.pdf — selezione multipla</div>
-                        <input type="file" id="batchFileInput" accept="application/pdf,.pdf" multiple>
+                        <input type="file" id="batchFileInput" accept="application/pdf,.pdf" multiple aria-label="Seleziona più file PDF da elaborare in batch">
                     </div>
-                    <div class="alert alert-error" id="batchErrorAlert"><i data-lucide="alert-circle" size="18"></i><span></span></div>
+                    <div class="alert alert-error" id="batchErrorAlert" role="status" aria-live="polite"><i data-lucide="alert-circle" size="18"></i><span></span></div>
                 </div>
 
                 <div class="card hidden" id="batchConfigCard">
-                    <h2><i data-lucide="settings-2" size="18" style="color:#3b82f6;"></i> 2. Regole di rilevamento (riutilizzabili)</h2>
+                    <h2><i data-lucide="settings-2" size="18" style="color:var(--uf-accent);"></i> 2. Regole di rilevamento (riutilizzabili)</h2>
                     <div class="checkbox-grid" id="batchRuleset">
                         <label class="checkbox-row"><input type="checkbox" value="email" checked> Indirizzi email</label>
                         <label class="checkbox-row"><input type="checkbox" value="phone" checked> Numeri di telefono</label>
@@ -773,7 +1022,7 @@
                         <input type="checkbox" id="batchAutoApply">
                         <label for="batchAutoApply">Applica automaticamente i rilevamenti senza revisione manuale</label>
                     </div>
-                    <div class="alert alert-warning toggle-warning" id="batchAutoApplyWarning">
+                    <div class="alert alert-warning" id="batchAutoApplyWarning" role="status" aria-live="polite">
                         <i data-lucide="triangle-alert" size="18"></i>
                         <span>Attenzione: con questa opzione attiva, tutti i box rilevati automaticamente (email, telefoni,
                         IBAN, carte, codici fiscali) verranno oscurati <strong>senza revisione umana</strong>. I regex usati
@@ -811,7 +1060,7 @@
 
         <div class="footer">
             <div style="margin-bottom: 8px;"> © 2026 Chiara Berti 13 </div>
-            <div style="color: #d4d4d4;">Elaborazione 100% locale nel browser — nessun file lascia mai il tuo computer</div>
+            <div style="color: var(--uf-upload-border);">Elaborazione 100% locale nel browser — nessun file lascia mai il tuo computer</div>
         </div>
     </div>
 

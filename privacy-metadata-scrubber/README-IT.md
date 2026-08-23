@@ -304,6 +304,40 @@ Puoi condividere l'intera cartella con colleghi:
 
 ## 📝 CHANGELOG
 
+### Versione 1.1 (Attuale) — Design system, tema scuro e passaggio di completezza
+- 🎨 Adottati i token del design system condiviso di Utility Forge (custom property CSS per i
+  colori di sfondo/card/bordo/testo/accento/successo/errore/warning/info/traccia della progress
+  bar), così questo strumento ora ha lo stesso aspetto e comportamento del resto della suite
+- 🌙 **Tema scuro**: un pulsante nell'intestazione passa da tema chiaro a scuro, memorizzato in
+  `localStorage` e riapplicato il prima possibile per una pagina che carica solo script esterni
+  (proprio quando `privacy-metadata-scrubber.js` viene eseguito, prima che il resto
+  dell'interfaccia venga costruito) per minimizzare un lampo chiaro→scuro; se non hai scelto nulla
+  segue la `prefers-color-scheme` del sistema operativo
+- 🔔 Componente alert unificato (`role="status" aria-live="polite"`, varianti
+  successo/errore/warning/info, scomparsa automatica dopo 6s per successo/info e 8s per
+  errore/warning), al posto dei due riquadri separati successo/errore della v1.0
+- ♿ Passaggio di accessibilità: anello di focus visibile su ogni elemento interattivo,
+  `aria-label` sul nuovo pulsante a sola icona del tema, un `<label>` esplicito (visivamente
+  nascosto dove ridondante con un placeholder) per ogni `<input>`, dimensioni delle icone
+  standardizzate (20px l'icona dell'intestazione, 18px le icone dei pulsanti, 16px le icone
+  inline/di elenco, 36px l'icona di stato vuoto)
+- 📱 Breakpoint responsive standardizzato a `680px` per allinearsi al resto della suite
+- ✅ **Novità: coda di revisione** — una tabella riassuntiva di ogni file caricato con le
+  categorie rilevate, visibile prima di lanciare una pulizia in batch, con una propria azione
+  "Scrub all confirmed" (i file non ancora ispezionati vengono ispezionati automaticamente prima)
+- ✅ **Novità: report HTML scaricabile** — accanto all'esportazione CSV/JSON già esistente, il
+  pulsante "Privacy Report (HTML)" produce un report autonomo e formattato, presentabile a un
+  cliente come prova che è stato eseguito un passaggio di pulizia della privacy. Elenca
+  deliberatamente solo quali *categorie* sono state trovate/rimosse per ogni file, non i valori
+  sensibili sottostanti, così il documento di prova non diventa a sua volta una nuova copia dei
+  dati di cui sta riferendo. Incluso automaticamente anche nello ZIP del batch come
+  `scrub_report.html`
+- ✅ **Novità: vista diff prima/dopo** — dopo aver ripulito un file, la sua scheda mostra una
+  tabella compatta di quali campi di metadati sono cambiati, confrontando i risultati Inspect del
+  file originale con una nuova ispezione eseguita sull'output effettivamente ripulito (non una
+  previsione), così puoi confermare cosa è cambiato senza scaricare e ri-ispezionare il risultato
+  separatamente
+
 ### Versione 1.0
 - 🎉 Prima release
 - ✅ Inspect: EXIF/GPS/IPTC/XMP per le immagini (exifr), dizionario Info dei PDF + scansione
@@ -335,5 +369,5 @@ Copyright (c) 2026 Chiara Berti 13
 
 ---
 
-**Privacy & Metadata Forensics Studio v1.0**
+**Privacy & Metadata Forensics Studio v1.1**
 Di Chiara Berti - 2026
