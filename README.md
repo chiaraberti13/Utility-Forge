@@ -1,29 +1,20 @@
-# 🛠️ Utility Forge
-
 <p align="center">
-  <a href="README.md">🇬🇧 English</a> | <a href="README-IT.md">🇮🇹 Italiano</a>
+  <img src="assets/banner.svg" alt="Utility-Forge" width="100%">
 </p>
 
-<p align="center">
-  <img src="assets/banner.svg" alt="Utility Forge" width="800">
-</p>
-
-A collection of standalone, privacy-first utility tools, in one repository. Every tool
-is self-contained — open it and it just works, no account, no SaaS signup, no data
-leaving your browser or your own server.
+<p align="center"><a href="README.md">English</a> · <a href="README.it.md">Italiano</a></p>
 
 <p align="center">
-  <a href="https://github.com/chiaraberti13/Utility-Forge/stargazers"><img src="https://img.shields.io/github/stars/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub stars"></a>
-  <a href="https://github.com/chiaraberti13/Utility-Forge/network/members"><img src="https://img.shields.io/github/forks/chiaraberti13/Utility-Forge?style=for-the-badge&color=blue" alt="GitHub forks"></a>
-  <a href="https://github.com/chiaraberti13/Utility-Forge/issues"><img src="https://img.shields.io/github/issues/chiaraberti13/Utility-Forge?style=for-the-badge&color=orange" alt="Open issues"></a>
-  <img src="https://img.shields.io/badge/tools-6-blue?style=for-the-badge" alt="6 tools">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/chiaraberti13/Utility-Forge?style=for-the-badge&color=green" alt="License"></a>
+  <img src="https://img.shields.io/badge/status-active-F2C94C?style=flat-square" alt="Project status: active">
+  <img src="https://img.shields.io/badge/category-AUTOMATION-22D3EE?style=flat-square" alt="AUTOMATION">
+  <img src="https://img.shields.io/badge/stack-JavaScript-8B949E?style=flat-square" alt="JavaScript">
+  <img src="https://img.shields.io/badge/languages-EN%20%7C%20IT-8B5CF6?style=flat-square" alt="English and Italian">
+  <img src="https://img.shields.io/badge/licence-MIT-2EA043?style=flat-square" alt="MIT">
 </p>
 
-<p align="center">
-  <b>If you find these tools useful, consider supporting the project:</b><br><br>
-  <a href="https://www.paypal.me/chiaraberti13"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal Donate"></a>
-</p>
+> A curated collection of standalone, privacy-first tools for documents, files and everyday automation.
+
+<p align="center"><a href="https://github.com/chiaraberti13/Utility-Forge/issues">Report an issue</a> · <a href="https://github.com/chiaraberti13/Utility-Forge">Repository</a></p>
 
 ---
 
