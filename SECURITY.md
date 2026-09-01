@@ -1,41 +1,48 @@
-# Security Policy
+<p align="center">
+  <img src="assets/banner.svg" alt="Utility Forge" width="100%">
+</p>
 
-## Supported versions
+<p align="center"><a href="#-english">🇬🇧 English</a> · <a href="#-italiano">🇮🇹 Italiano</a></p>
 
-Security fixes are applied to the latest version on the default branch. Older
-commits, forks and unofficial builds are not supported unless explicitly
-documented.
+<p align="center">
+  <img src="https://img.shields.io/badge/security-responsible%20disclosure-22D3EE?style=flat-square" alt="Responsible disclosure">
+  <img src="https://img.shields.io/badge/status-maintained-F2C94C?style=flat-square" alt="Maintained">
+</p>
 
-## Reporting a vulnerability
+<p align="center"><a href="README.md">Project README</a> · <a href="LICENSE">MIT Licence</a></p>
 
-Please report suspected vulnerabilities privately through
-[GitHub Security Advisories](https://github.com/chiaraberti13/Utility-Forge/security/advisories/new).
+---
 
-Do not open a public issue for an unpatched vulnerability. Include, when
-possible:
+## 🇬🇧 English
 
-- the affected version or commit;
-- a clear description of the impact;
-- reproducible steps or a minimal proof of concept;
-- suggested mitigations, if known;
-- any relevant logs with credentials and personal data removed.
+### Supported versions
 
-Please allow reasonable time for investigation and remediation before public
-disclosure.
+Security fixes target the latest version on the default branch. Older commits, forks and unofficial builds are not supported unless explicitly documented.
 
-## Scope
+### Reporting a vulnerability
 
-This policy covers vulnerabilities in Utility Forge. Vulnerabilities in external
-dependencies or third-party services should also be reported to their
-maintainers. A dependency report may still be submitted here when it directly
-affects this project.
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/chiaraberti13/Utility-Forge/security/advisories/new). Do not disclose an unpatched vulnerability in a public issue.
 
-Testing must be performed only on systems and data you own or are explicitly
-authorized to test. Do not perform denial-of-service testing, access third-party
-data, degrade services, or use social engineering.
+Include the affected tool and version, impact, reproducible steps, a minimal proof of concept when safe, possible mitigations and sanitized logs.
 
-## Responsible use
+### Scope
 
-This policy does not grant authorization to test third-party infrastructure.
-Users remain responsible for complying with applicable laws, licences and
-written scopes of authorization.
+This policy covers code maintained in this repository. Test only files, systems and data you own or are explicitly authorized to use. Do not upload third-party personal or confidential data during testing.
+
+---
+
+## 🇮🇹 Italiano
+
+### Versioni supportate
+
+Le correzioni di sicurezza riguardano la versione più recente del branch predefinito. Commit precedenti, fork e build non ufficiali non sono supportati salvo diversa indicazione.
+
+### Segnalazione di una vulnerabilità
+
+Segnala privatamente le vulnerabilità tramite [GitHub Security Advisories](https://github.com/chiaraberti13/Utility-Forge/security/advisories/new). Non divulgare vulnerabilità non corrette in issue pubbliche.
+
+Indica strumento e versione interessati, impatto, passaggi riproducibili, una prova di concetto minima quando sicura, possibili mitigazioni e log privati di dati sensibili.
+
+### Ambito
+
+Questa policy copre il codice mantenuto nel repository. Utilizza esclusivamente file, sistemi e dati di tua proprietà o per i quali possiedi un’autorizzazione esplicita. Non caricare dati personali o riservati di terzi durante i test.
