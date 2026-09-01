@@ -1,40 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 260" width="1200" height="260" role="img" aria-label="Utility Forge">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="Utility Forge — Standalone privacy-first tools for documents, files and daily automation">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="260" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0f172a"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1117"/>
       <stop offset="1" stop-color="#111827"/>
     </linearGradient>
-    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fbbf24"/>
-      <stop offset="1" stop-color="#d97706"/>
-    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#22D3EE" stroke-opacity=".055"/>
+    </pattern>
   </defs>
-
-  <rect x="0" y="0" width="1200" height="260" fill="url(#bg)"/>
-
-  <!-- anvil silhouette, kept low and small so it never competes with the text block -->
-  <g fill="#28374d">
-    <polygon points="455,228 562,203 562,228"/>
-    <rect x="562" y="196" width="150" height="32"/>
-    <rect x="712" y="186" width="22" height="15"/>
-    <rect x="612" y="228" width="40" height="16"/>
-    <polygon points="582,244 682,244 702,259 562,259"/>
-  </g>
-
-  <!-- small sparks struck off the anvil -->
-  <g fill="url(#spark)">
-    <polygon points="515,158 523,172 515,186 507,172"/>
-    <circle cx="545" cy="180" r="3.5"/>
-    <circle cx="500" cy="196" r="2.5"/>
-  </g>
-
-  <!-- accent strips, one per tool currently in the collection -->
-  <rect x="0" y="0" width="10" height="260" fill="#3b82f6"/>
-  <rect x="1190" y="0" width="10" height="260" fill="#d80101"/>
-
-  <text x="600" y="70" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" letter-spacing="7" fill="#94a3b8">STANDALONE · PRIVACY-FIRST</text>
-
-  <text x="600" y="122" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="3" fill="#f8fafc">UTILITY FORGE</text>
-
-  <text x="600" y="155" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#cbd5e1">One repository. Every tool self-contained. Open it and it just works.</text>
+  <rect width="1280" height="320" rx="22" fill="url(#bg)"/>
+  <rect width="1280" height="320" rx="22" fill="url(#grid)"/>
+  <rect x="0" y="0" width="10" height="320" rx="5" fill="#F2C94C"/>
+  <rect x="72" y="48" width="172" height="36" rx="18" fill="#152431" stroke="#22D3EE" stroke-opacity=".72"/>
+  <text x="94" y="72" fill="#22D3EE" font-family="JetBrains Mono, ui-monospace, monospace" font-size="16" font-weight="700" letter-spacing="1.5">AUTOMATION</text>
+  <text x="72" y="158" fill="#E6EDF3" font-family="Inter, Arial, sans-serif" font-size="54" font-weight="750">Utility Forge</text>
+  <text x="72" y="207" fill="#AAB7C4" font-family="Inter, Arial, sans-serif" font-size="22">Standalone privacy-first tools for documents, files and daily automation</text>
+  <circle cx="80" cy="265" r="6" fill="#F2C94C"/>
+  <text x="98" y="271" fill="#E6EDF3" font-family="JetBrains Mono, ui-monospace, monospace" font-size="17">@chiaraberti13</text>
+  <rect x="1030" y="246" width="178" height="36" rx="18" fill="#18222D" stroke="#F2C94C" stroke-opacity=".75"/>
+  <text x="1119" y="270" text-anchor="middle" fill="#F2C94C" font-family="JetBrains Mono, ui-monospace, monospace" font-size="14" font-weight="700">ACTIVE</text>
 </svg>
